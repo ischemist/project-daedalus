@@ -1,0 +1,25 @@
+# internal docs & agent context
+AGENTS.md
+docs/
+
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+dist/
+
+# env files
+.env
+.env.*
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.idea/
+.vscode/
+*.swp
+*.swo
