@@ -81,10 +81,6 @@ import {
   type ColorFamily,
   text,
   borders,
-  backgrounds,
-  rings,
-  progress as progressTokens,
-  controls,
 } from "@/lib/theme-tokens"
 
 import {
@@ -790,7 +786,7 @@ export function InteractionSection() {
             Themed range sliders — one per family.
           </p>
           <div className="grid gap-6 md:grid-cols-3">
-            {FAMILIES.map(({ key, label }) => {
+            {FAMILIES.map(({ key }) => {
               const paramLabel =
                 key === "aegean"
                   ? "beam_size"
@@ -1605,7 +1601,7 @@ export function InteractionSection() {
               a calendar rendered directly inside a card, single selection mode.
             </p>
             <div className="grid gap-6 md:grid-cols-3">
-              {FAMILIES.map(({ key, label }) => (
+              {FAMILIES.map(({ key }) => (
                 <Card key={key} className={cn("border-[1.5px]", borders[key])}>
                   <CardHeader>
                     <CardTitle className={text[key]}>select a date</CardTitle>
@@ -1642,7 +1638,7 @@ export function InteractionSection() {
               a calendar in range mode — click to set start, click again to set end.
             </p>
             <div className="grid gap-6 md:grid-cols-3">
-              {FAMILIES.map(({ key, label }) => (
+              {FAMILIES.map(({ key }) => (
                 <Card key={key} className={cn("border-[1.5px]", borders[key])}>
                   <CardHeader>
                     <CardTitle className={text[key]}>select a range</CardTitle>

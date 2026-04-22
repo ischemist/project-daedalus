@@ -5,7 +5,6 @@ import {
   Check,
   Edit,
   FlaskConical,
-  Play,
   Plus,
   Save,
   Search,
