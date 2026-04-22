@@ -7,7 +7,7 @@ import { THEME_TOKENS } from "@/lib/theme-tokens"
 type CardVariant = "default" | "aegean" | "forge" | "anvil" | "destructive"
 
 const cardVariants = cva(
-  "group/card flex flex-col overflow-hidden rounded-xl border text-sm shadow-sm has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+  "group/card flex flex-col overflow-hidden rounded-xl border-[1.5px] text-sm has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
   {
     variants: {
       variant: {
@@ -53,7 +53,7 @@ const cardHeaderVariants = cva(
 )
 
 const cardFooterVariants = cva(
-  "flex items-center rounded-b-xl border-t bg-muted/50",
+  "flex items-center rounded-b-xl border-t-[1.5px] bg-muted/50",
   {
     variants: {
       variant: {

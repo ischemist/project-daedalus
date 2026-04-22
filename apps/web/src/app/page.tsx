@@ -11,19 +11,19 @@ export default function Page() {
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">project daedalus</p>
           <div className="space-y-4">
             <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
-              orchestration for retrosynthesis runtimes, not another toy dashboard.
+              orchestration for retrosynthesis execution, with only the useful shell left standing.
             </h1>
             <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
               this scaffold wires postgres, prisma, better auth, docker, ci, and the authenticated shell so the real
-              planning surface can land on stable ground.
+              product surface can land on stable ground.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg" className="rounded-full px-6">
+            <Button asChild size="lg" className="px-6">
               <Link href="/signin">enter the platform</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="rounded-full px-6">
-              <Link href="/dashboard">view protected shell</Link>
+            <Button asChild size="lg" variant="outline" className="px-6">
+              <Link href="/manage/design-language">view design language</Link>
             </Button>
           </div>
         </div>
@@ -37,8 +37,8 @@ export default function Page() {
           </Card>
           <Card className="border-border/60 bg-card/80 backdrop-blur">
             <CardHeader>
-              <CardTitle>runtime posture</CardTitle>
-              <CardDescription>sidebar + breadcrumb slot ready for dashboards, runtimes, workers, and artifacts.</CardDescription>
+              <CardTitle>ui baseline</CardTitle>
+              <CardDescription>the protected dashboard shell and design language reference are the only kept surfaces for now.</CardDescription>
             </CardHeader>
           </Card>
           <Card className="border-border/60 bg-card/80 backdrop-blur">

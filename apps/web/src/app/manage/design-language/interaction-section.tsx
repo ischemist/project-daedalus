@@ -456,7 +456,7 @@ export function InteractionSection() {
             </Card>
 
             {/* aegean card */}
-            <Card className={cn("border", borders.aegean)}>
+            <Card className={cn("border-[1.5px]", borders.aegean)}>
               <CardHeader>
                 <CardTitle className={text.aegean}>
                   <span className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export function InteractionSection() {
             </Card>
 
             {/* forge card */}
-            <Card className={cn("border", borders.forge)}>
+            <Card className={cn("border-[1.5px]", borders.forge)}>
               <CardHeader>
                 <CardTitle className={text.forge}>
                   <span className="flex items-center gap-2">
@@ -516,7 +516,7 @@ export function InteractionSection() {
             </Card>
 
             {/* anvil card */}
-            <Card className={cn("border", borders.anvil)}>
+            <Card className={cn("border-[1.5px]", borders.anvil)}>
               <CardHeader>
                 <CardTitle className={text.anvil}>
                   <span className="flex items-center gap-2">
@@ -1086,10 +1086,10 @@ export function InteractionSection() {
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+            <div className="overflow-hidden rounded-xl border-[1.5px] border-border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30">
+                  <tr className="border-b-[1.5px] border-border bg-muted/30">
                     <th className="p-3 text-left font-medium text-muted-foreground">status</th>
                     <th className="p-3 text-left font-medium text-muted-foreground">model</th>
                     <th className="p-3 text-left font-medium text-muted-foreground">target</th>
@@ -1102,7 +1102,7 @@ export function InteractionSection() {
                     return (
                       <tr
                         key={i}
-                        className="border-b border-border transition-colors last:border-0 hover:bg-muted/50"
+                        className="border-b-[1.5px] border-border transition-colors last:border-0 hover:bg-muted/50"
                       >
                         <td className="p-3">
                           <FilledBadge def={def} density="full" />
@@ -1400,7 +1400,7 @@ export function InteractionSection() {
           <p className="text-sm text-muted-foreground">
             Inline command palette with themed items across variant families.
           </p>
-          <Command className="rounded-lg border shadow-md">
+          <Command className="rounded-lg border-[1.5px]">
             <CommandInput placeholder="Type a command or search..." />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
@@ -1606,7 +1606,7 @@ export function InteractionSection() {
             </p>
             <div className="grid gap-6 md:grid-cols-3">
               {FAMILIES.map(({ key, label }) => (
-                <Card key={key} className={cn("border", borders[key])}>
+                <Card key={key} className={cn("border-[1.5px]", borders[key])}>
                   <CardHeader>
                     <CardTitle className={text[key]}>select a date</CardTitle>
                     <CardDescription>
@@ -1643,7 +1643,7 @@ export function InteractionSection() {
             </p>
             <div className="grid gap-6 md:grid-cols-3">
               {FAMILIES.map(({ key, label }) => (
-                <Card key={key} className={cn("border", borders[key])}>
+                <Card key={key} className={cn("border-[1.5px]", borders[key])}>
                   <CardHeader>
                     <CardTitle className={text[key]}>select a range</CardTitle>
                     <CardDescription>

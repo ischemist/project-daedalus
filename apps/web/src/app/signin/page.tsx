@@ -11,8 +11,8 @@ export default function SignInPage() {
               request a magic link and enter the labyrinth.
             </h1>
             <p className="text-base leading-8 text-muted-foreground md:text-lg">
-              better auth now rides on passwordless email links through resend, with the protected shell already split into
-              dashboard, planning, runtimes, workers, artifacts, and settings.
+              better auth now rides on passwordless email links through resend, with the protected dashboard shell ready
+              for the next real product pass.
             </p>
           </div>
         </div>

@@ -33,7 +33,7 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[1px] after:bg-stone-500/20 relative",
-        filled: "border border-stone-500/30",
+        filled: "border-[1.5px] border-stone-500/30",
       },
     },
     defaultVariants: {
@@ -85,7 +85,7 @@ function TabsList({
 
 // Base trigger styles (no theme color) — matched to design-showcase
 const baseTriggerClasses =
-  "relative z-10 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start hover:cursor-pointer disabled:pointer-events-none disabled:opacity-50 group-data-[variant=default]/tabs-list:data-active:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  "relative z-10 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border-[1.5px] border-transparent px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start hover:cursor-pointer disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 
 // Theme-specific active/hover colors for triggers
 // Tokens now use data-active (Base UI) directly — no runtime .replace() needed

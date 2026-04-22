@@ -164,54 +164,54 @@ export const THEME_TOKENS = {
   buttons: {
     // neutral
     default:
-      'border border-stone-300/80 bg-white/70 text-stone-800 hover:border-stone-400 hover:bg-white hover:text-stone-900 dark:border-primary/40 dark:bg-primary/5 dark:text-primary dark:hover:border-primary/70 dark:hover:bg-primary/10 shadow-sm',
+      'border-[1.5px] border-stone-300/80 bg-white/70 text-stone-800 hover:border-stone-400 hover:bg-white hover:text-stone-900 dark:border-primary/40 dark:bg-primary/5 dark:text-primary dark:hover:border-primary/70 dark:hover:bg-primary/10',
     outline:
-      'border border-stone-300/80 bg-white/40 text-stone-700 hover:bg-white/80 hover:text-stone-900 hover:border-stone-400 dark:border-stone-600/65 dark:bg-stone-800/5 dark:text-stone-200 dark:hover:bg-stone-700/30 dark:hover:border-stone-500/75 shadow-sm',
+      'border-[1.5px] border-stone-300/80 bg-white/40 text-stone-700 hover:bg-white/80 hover:text-stone-900 hover:border-stone-400 dark:border-stone-600/65 dark:bg-stone-800/5 dark:text-stone-200 dark:hover:bg-stone-700/30 dark:hover:border-stone-500/75',
     secondary:
-      'border border-stone-200/80 bg-stone-100/80 text-stone-700 hover:bg-stone-200/90 hover:text-stone-900 hover:border-stone-300 dark:border-stone-700/65 dark:bg-stone-800/30 dark:text-stone-200 dark:hover:bg-stone-700/50 dark:hover:border-stone-600/75 shadow-sm',
+      'border-[1.5px] border-stone-200/80 bg-stone-100/80 text-stone-700 hover:bg-stone-200/90 hover:text-stone-900 hover:border-stone-300 dark:border-stone-700/65 dark:bg-stone-800/30 dark:text-stone-200 dark:hover:bg-stone-700/50 dark:hover:border-stone-600/75',
     ghost:
       'border-none bg-transparent text-stone-700 dark:text-stone-300 hover:bg-stone-100/50 hover:text-stone-900 dark:hover:bg-stone-800/50 dark:hover:text-stone-100',
     link: 'border-none bg-transparent text-primary underline-offset-4 hover:underline',
 
     // aegean — teal 800/500 — platform identity, navigation, surfaces
     aegean:
-      'border border-teal-700/25 dark:border-teal-500/35 bg-gradient-to-r from-teal-700/5 to-teal-600/5 text-teal-800 dark:text-teal-500 hover:border-teal-700/60 dark:hover:border-teal-500/65 hover:bg-teal-700/10 dark:hover:bg-teal-700/20 shadow-sm group',
+      'border-[1.5px] border-teal-700/25 dark:border-teal-500/35 bg-gradient-to-r from-teal-700/5 to-teal-600/5 text-teal-800 dark:text-teal-500 hover:border-teal-700/60 dark:hover:border-teal-500/65 hover:bg-teal-700/10 dark:hover:bg-teal-700/20 group',
     aegeanOutline:
-      'border border-teal-700/25 dark:border-teal-500/35 bg-transparent text-teal-800 dark:text-teal-500 hover:border-teal-700/60 hover:bg-teal-700/5 dark:hover:border-teal-500/65 dark:hover:bg-teal-700/10 shadow-sm',
+      'border-[1.5px] border-teal-700/25 dark:border-teal-500/35 bg-transparent text-teal-800 dark:text-teal-500 hover:border-teal-700/60 hover:bg-teal-700/5 dark:hover:border-teal-500/65 dark:hover:bg-teal-700/10',
     aegeanGhost:
       'border-none bg-transparent text-teal-800 dark:text-teal-500 hover:bg-teal-700/5 dark:hover:bg-teal-700/10',
     aegeanSolid:
-      'border border-teal-700/70 bg-teal-700/90 text-white hover:bg-teal-800 hover:border-teal-800 dark:border-teal-500/75 dark:bg-teal-700/80 dark:hover:bg-teal-800/90 dark:hover:border-teal-800 shadow-sm',
+      'border-[1.5px] border-teal-700/70 bg-teal-700/90 text-white hover:bg-teal-800 hover:border-teal-800 dark:border-teal-500/75 dark:bg-teal-700/80 dark:hover:bg-teal-800/90 dark:hover:border-teal-800',
 
     // forge — amber 800/500 — actions that enqueue work (submit, run)
     forge:
-      'border border-amber-700/25 dark:border-amber-500/35 bg-gradient-to-r from-amber-700/5 to-amber-600/5 text-amber-800 dark:text-amber-500 hover:border-amber-700/60 dark:hover:border-amber-500/65 hover:bg-amber-700/10 dark:hover:bg-amber-700/20 shadow-sm group',
+      'border-[1.5px] border-amber-700/25 dark:border-amber-500/35 bg-gradient-to-r from-amber-700/5 to-amber-600/5 text-amber-800 dark:text-amber-500 hover:border-amber-700/60 dark:hover:border-amber-500/65 hover:bg-amber-700/10 dark:hover:bg-amber-700/20 group',
     forgeOutline:
-      'border border-amber-700/25 dark:border-amber-500/35 bg-transparent text-amber-800 dark:text-amber-500 hover:border-amber-700/60 hover:bg-amber-700/5 dark:hover:border-amber-500/65 dark:hover:bg-amber-700/10 shadow-sm',
+      'border-[1.5px] border-amber-700/25 dark:border-amber-500/35 bg-transparent text-amber-800 dark:text-amber-500 hover:border-amber-700/60 hover:bg-amber-700/5 dark:hover:border-amber-500/65 dark:hover:bg-amber-700/10',
     forgeGhost:
       'border-none bg-transparent text-amber-800 dark:text-amber-500 hover:bg-amber-700/5 dark:hover:bg-amber-700/10',
     forgeSolid:
-      'border border-amber-700/70 bg-amber-700/90 text-white hover:bg-amber-800 hover:border-amber-800 dark:border-amber-500/75 dark:bg-amber-700/80 dark:hover:bg-amber-800/90 dark:hover:border-amber-800 shadow-sm',
+      'border-[1.5px] border-amber-700/70 bg-amber-700/90 text-white hover:bg-amber-800 hover:border-amber-800 dark:border-amber-500/75 dark:bg-amber-700/80 dark:hover:bg-amber-800/90 dark:hover:border-amber-800',
 
     // anvil — slate 700/400 — structural chrome, admin, infra mgmt
     anvil:
-      'border border-slate-500/30 dark:border-slate-400/35 bg-gradient-to-r from-slate-500/5 to-slate-400/5 text-slate-700 dark:text-slate-400 hover:border-slate-500/70 dark:hover:border-slate-400/65 hover:bg-slate-500/10 dark:hover:bg-slate-500/20 shadow-sm group',
+      'border-[1.5px] border-slate-500/30 dark:border-slate-400/35 bg-gradient-to-r from-slate-500/5 to-slate-400/5 text-slate-700 dark:text-slate-400 hover:border-slate-500/70 dark:hover:border-slate-400/65 hover:bg-slate-500/10 dark:hover:bg-slate-500/20 group',
     anvilOutline:
-      'border border-slate-500/30 dark:border-slate-400/35 bg-transparent text-slate-700 dark:text-slate-400 hover:border-slate-500/70 hover:bg-slate-500/5 dark:hover:border-slate-400/65 dark:hover:bg-slate-500/10 shadow-sm',
+      'border-[1.5px] border-slate-500/30 dark:border-slate-400/35 bg-transparent text-slate-700 dark:text-slate-400 hover:border-slate-500/70 hover:bg-slate-500/5 dark:hover:border-slate-400/65 dark:hover:bg-slate-500/10',
     anvilGhost:
       'border-none bg-transparent text-slate-700 dark:text-slate-400 hover:bg-slate-500/10 dark:hover:bg-slate-500/10',
     anvilSolid:
-      'border border-slate-500/70 bg-slate-500/90 text-white hover:bg-slate-600 hover:border-slate-600 dark:border-slate-400/75 dark:bg-slate-500/80 dark:hover:bg-slate-600/90 dark:hover:border-slate-600 shadow-sm',
+      'border-[1.5px] border-slate-500/70 bg-slate-500/90 text-white hover:bg-slate-600 hover:border-slate-600 dark:border-slate-400/75 dark:bg-slate-500/80 dark:hover:bg-slate-600/90 dark:hover:border-slate-600',
 
     // destructive — rose/red — cancellations, deletions, irreversible actions
     destructive:
-      'border border-rose-500/30 dark:border-rose-400/35 bg-gradient-to-r from-rose-500/5 to-red-500/5 text-rose-700 dark:text-rose-400 hover:border-rose-500/70 dark:hover:border-rose-400/65 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 shadow-sm',
+      'border-[1.5px] border-rose-500/30 dark:border-rose-400/35 bg-gradient-to-r from-rose-500/5 to-red-500/5 text-rose-700 dark:text-rose-400 hover:border-rose-500/70 dark:hover:border-rose-400/65 hover:bg-rose-500/10 dark:hover:bg-rose-500/20',
     destructiveOutline:
-      'border border-rose-500/30 dark:border-rose-400/35 bg-transparent text-rose-700 dark:text-rose-400 hover:border-rose-500/70 hover:bg-rose-500/5 dark:hover:border-rose-400/65 dark:hover:bg-rose-500/10 shadow-sm',
+      'border-[1.5px] border-rose-500/30 dark:border-rose-400/35 bg-transparent text-rose-700 dark:text-rose-400 hover:border-rose-500/70 hover:bg-rose-500/5 dark:hover:border-rose-400/65 dark:hover:bg-rose-500/10',
     destructiveGhost:
       'border-none bg-transparent text-rose-700 dark:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10',
     destructiveSolid:
-      'border border-rose-500/70 bg-rose-500/90 text-white hover:bg-rose-700 hover:border-rose-600 dark:border-rose-400/75 dark:bg-rose-500/80 dark:hover:bg-rose-600/90 dark:hover:border-rose-600 shadow-sm',
+      'border-[1.5px] border-rose-500/70 bg-rose-500/90 text-white hover:bg-rose-700 hover:border-rose-600 dark:border-rose-400/75 dark:bg-rose-500/80 dark:hover:bg-rose-600/90 dark:hover:border-rose-600',
   },
 
   // input + textarea variants (shared)
@@ -278,9 +278,9 @@ export const THEME_TOKENS = {
   dialogs: {
     header: {
       default: '',
-      aegean: 'border-b border-teal-300/30 dark:border-teal-500/35 pb-4 mb-4',
-      forge: 'border-b border-amber-300/30 dark:border-amber-500/35 pb-4 mb-4',
-      anvil: 'border-b border-slate-200/30 dark:border-slate-700/35 pb-4 mb-4',
+      aegean: 'border-b-[1.5px] border-teal-300/30 dark:border-teal-500/35 pb-4 mb-4',
+      forge: 'border-b-[1.5px] border-amber-300/30 dark:border-amber-500/35 pb-4 mb-4',
+      anvil: 'border-b-[1.5px] border-slate-200/30 dark:border-slate-700/35 pb-4 mb-4',
     },
     title: {
       default: '',
@@ -419,19 +419,19 @@ export const THEME_TOKENS = {
   // tooltip content theming
   tooltips: {
     default: {
-      content: 'border-stone-300/50 text-stone-700 shadow-stone-500/10 dark:border-stone-600/55 dark:text-stone-300',
+      content: 'border-stone-300/50 text-stone-700 dark:border-stone-600/55 dark:text-stone-300',
       arrow: 'bg-white dark:bg-zinc-950',
     },
     aegean: {
-      content: 'border-teal-500/30 text-teal-800 shadow-teal-500/10 dark:border-teal-500/55 dark:text-teal-300',
+      content: 'border-teal-500/30 text-teal-800 dark:border-teal-500/55 dark:text-teal-300',
       arrow: 'bg-white dark:bg-zinc-950',
     },
     forge: {
-      content: 'border-amber-500/30 text-amber-800 shadow-amber-500/10 dark:border-amber-500/55 dark:text-amber-300',
+      content: 'border-amber-500/30 text-amber-800 dark:border-amber-500/55 dark:text-amber-300',
       arrow: 'bg-white dark:bg-zinc-950',
     },
     anvil: {
-      content: 'border-slate-400/30 text-slate-700 shadow-slate-500/10 dark:border-slate-500/55 dark:text-slate-300',
+      content: 'border-slate-400/30 text-slate-700 dark:border-slate-500/55 dark:text-slate-300',
       arrow: 'bg-white dark:bg-zinc-950',
     },
   },
@@ -480,7 +480,7 @@ export const buttons = {
     solid:
       'bg-teal-800 text-white hover:bg-teal-900 dark:bg-teal-600 dark:hover:bg-teal-700 dark:text-white',
     outline:
-      'border border-teal-700/30 text-teal-800 hover:bg-teal-50 dark:border-teal-500/30 dark:text-teal-400 dark:hover:bg-teal-950/50',
+      'border-[1.5px] border-teal-700/30 text-teal-800 hover:bg-teal-50 dark:border-teal-500/30 dark:text-teal-400 dark:hover:bg-teal-950/50',
     ghost:
       'text-teal-800 hover:bg-teal-100/50 dark:text-teal-400 dark:hover:bg-teal-900/30',
   },
@@ -488,7 +488,7 @@ export const buttons = {
     solid:
       'bg-amber-800 text-white hover:bg-amber-900 dark:bg-amber-600 dark:hover:bg-amber-700 dark:text-white',
     outline:
-      'border border-amber-700/30 text-amber-800 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-950/50',
+      'border-[1.5px] border-amber-700/30 text-amber-800 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-950/50',
     ghost:
       'text-amber-800 hover:bg-amber-100/50 dark:text-amber-400 dark:hover:bg-amber-900/30',
   },
@@ -496,7 +496,7 @@ export const buttons = {
     solid:
       'bg-slate-700 text-white hover:bg-slate-800 dark:bg-slate-500 dark:hover:bg-slate-600 dark:text-white',
     outline:
-      'border border-slate-500/30 text-slate-700 hover:bg-slate-50 dark:border-slate-400/30 dark:text-slate-300 dark:hover:bg-slate-900/30',
+      'border-[1.5px] border-slate-500/30 text-slate-700 hover:bg-slate-50 dark:border-slate-400/30 dark:text-slate-300 dark:hover:bg-slate-900/30',
     ghost:
       'text-slate-700 hover:bg-slate-100/50 dark:text-slate-300 dark:hover:bg-slate-800/30',
   },

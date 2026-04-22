@@ -1,12 +1,4 @@
-import {
-  BoxesIcon,
-  CogIcon,
-  LayoutDashboardIcon,
-  ListTreeIcon,
-  type LucideIcon,
-  NetworkIcon,
-  SatelliteDishIcon,
-} from "lucide-react"
+import { LayoutDashboardIcon, type LucideIcon } from "lucide-react"
 
 export type AppNavItem = {
   href: string
@@ -21,36 +13,6 @@ export const appNavItems: AppNavItem[] = [
     title: "dashboard",
     summary: "queue health, active workers, and system posture.",
     icon: LayoutDashboardIcon,
-  },
-  {
-    href: "/planning",
-    title: "planning",
-    summary: "submission entrypoint for retrosynthesis jobs.",
-    icon: ListTreeIcon,
-  },
-  {
-    href: "/runtimes",
-    title: "runtimes",
-    summary: "registered model runtimes and execution modes.",
-    icon: SatelliteDishIcon,
-  },
-  {
-    href: "/workers",
-    title: "workers",
-    summary: "worker pool capacity, leases, and execution health.",
-    icon: NetworkIcon,
-  },
-  {
-    href: "/artifacts",
-    title: "artifacts",
-    summary: "filesystem-backed task outputs and normalized routes.",
-    icon: BoxesIcon,
-  },
-  {
-    href: "/settings",
-    title: "settings",
-    summary: "auth, postgres, and local deployment configuration.",
-    icon: CogIcon,
   },
 ]
 

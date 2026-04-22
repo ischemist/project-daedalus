@@ -61,7 +61,7 @@ export function AuthCard() {
   }
 
   return (
-    <Card className="border-border/70 bg-card/90 shadow-2xl shadow-black/5 backdrop-blur">
+    <Card className="border-border/70 bg-card/90 backdrop-blur">
       <CardHeader className="space-y-4">
         <div className="space-y-1">
           <CardTitle>access daedalus</CardTitle>
