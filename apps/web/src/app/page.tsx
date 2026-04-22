@@ -1,54 +1,58 @@
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function Page() {
   return (
-    <main className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(250,247,242,1))] dark:bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.14),transparent_25%),linear-gradient(180deg,rgba(20,18,16,1),rgba(12,10,9,1))]">
+    <main className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.16),transparent_30%),linear-gradient(180deg,rgba(240,253,250,0.92),rgba(247,250,252,1))] dark:bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.18),transparent_25%),linear-gradient(180deg,rgba(9,19,18,1),rgba(8,12,12,1))]">
       <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col justify-center gap-10 px-6 py-16 md:px-8">
-        <div className="max-w-3xl space-y-5">
+        <div className="max-w-5xl space-y-5">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">project daedalus</p>
-          <div className="space-y-4">
-            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
-              orchestration for retrosynthesis execution, with only the useful shell left standing.
+          <div className="space-y-5">
+            <h1 className="text-4xl font-semibold tracking-tight leading-[1.05] md:text-5xl">
+              <span className="block text-teal-700/55 dark:text-teal-400/55">chemistry runs on retrosynthesis.</span>
+              <span className="block text-teal-700 dark:text-teal-400">retrosynthesis runs on daedalus.</span>
             </h1>
             <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-              this scaffold wires postgres, prisma, better auth, docker, ci, and the authenticated shell so the real
-              product surface can land on stable ground.
+              an open-source workspace that turns every open retrosynthesis planner into a one-click tool. built
+              for chemists who need answers, and model developers who&apos;d rather release chemistry than maintain a ui.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg" className="px-6">
-              <Link href="/signin">enter the platform</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="px-6">
-              <Link href="/manage/design-language">view design language</Link>
+            <Button asChild size="lg" variant="aegean" className="px-6">
+              <Link href="/signin">start planning</Link>
             </Button>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
+          <Card variant="aegean" className="backdrop-blur">
             <CardHeader>
-              <CardTitle>control plane</CardTitle>
-              <CardDescription>next.js app router shell with better auth and prisma-backed sessions.</CardDescription>
+              <CardTitle>plan, don&apos;t plumb.</CardTitle>
+              <CardDescription>
+                drop in a target, pick a planner, get a route back. conda envs, docker builds, queue management,
+                and json wrangling — all handled.
+              </CardDescription>
             </CardHeader>
           </Card>
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
+          <Card variant="aegean" className="backdrop-blur">
             <CardHeader>
-              <CardTitle>ui baseline</CardTitle>
-              <CardDescription>the protected dashboard shell and design language reference are the only kept surfaces for now.</CardDescription>
+              <CardTitle>ship chemistry, not streamlit.</CardTitle>
+              <CardDescription>
+                plug your retrosynthesis model into daedalus and get a chemistry-aware ui, run history, and real
+                users — the day your model merges.
+              </CardDescription>
             </CardHeader>
           </Card>
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
+          <Card variant="aegean" className="backdrop-blur">
             <CardHeader>
-              <CardTitle>infra baseline</CardTitle>
-              <CardDescription>dockerized postgres and github workflows ready for the first real slices of platform code.</CardDescription>
+              <CardTitle>open all the way down.</CardTitle>
+              <CardDescription>
+                daedalus is open source. run it on a laptop, a lab gpu box, or institutional hpc. fork it, add a
+                planner, send a pr. no vendor, no lock-in, no surprise paywall.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 text-xs text-muted-foreground">
-              prisma 7.7.0 · better auth 1.6.5
-            </CardContent>
           </Card>
         </div>
       </div>
