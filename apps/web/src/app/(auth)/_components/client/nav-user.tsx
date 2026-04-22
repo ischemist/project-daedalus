@@ -14,7 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 type NavUserProps = {
   name: string | null
@@ -30,6 +31,12 @@ export function NavUser({ name, email, image }: NavUserProps) {
   )
 
   const displayName = name ?? "operator"
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
 
   const signOut = async () => {
     await authClient.signOut({
@@ -43,50 +50,50 @@ export function NavUser({ name, email, image }: NavUserProps) {
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent" />}
-          >
-            <Avatar className="h-8 w-8 rounded-xl">
-              <AvatarImage src={image ?? undefined} alt={displayName} />
-              <AvatarFallback className="rounded-xl">{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{displayName}</span>
-              <span className="truncate text-xs text-muted-foreground">{email}</span>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={8}
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-60 rounded-2xl"
-          >
-            <DropdownMenuLabel className="flex items-center gap-3 py-3">
-              <Avatar className="h-9 w-9 rounded-xl">
-                <AvatarImage src={image ?? undefined} alt={displayName} />
-                <AvatarFallback className="rounded-xl">{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="grid text-left">
-                <span className="font-medium">{displayName}</span>
-                <span className="text-xs text-muted-foreground">{email}</span>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <ShieldCheckIcon className="mr-2 h-4 w-4" />
-              {lastMethod ? `last sign-in: ${lastMethod.replaceAll("-", " ")}` : "passwordless auth session"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut}>
-              <LogOutIcon className="mr-2 h-4 w-4" />
-              sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DropdownMenuTrigger
+              className="rounded-md outline-hidden transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              aria-label={displayName}
+            />
+          }
+        >
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={image ?? undefined} alt={displayName} />
+            <AvatarFallback className="text-xs">{initials || "O"}</AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+        <TooltipContent side="top">{displayName}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent
+        align="end"
+        side={isMobile ? "bottom" : "top"}
+        sideOffset={8}
+        className="min-w-60 rounded-lg"
+      >
+        <DropdownMenuLabel className="flex items-center gap-3 py-3">
+          <Avatar className="h-9 w-9 rounded-lg">
+            <AvatarImage src={image ?? undefined} alt={displayName} />
+            <AvatarFallback className="rounded-lg">{initials || "O"}</AvatarFallback>
+          </Avatar>
+          <div className="grid text-left">
+            <span className="font-medium">{displayName}</span>
+            <span className="text-xs text-muted-foreground">{email}</span>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled>
+          <ShieldCheckIcon className="mr-2 h-4 w-4" />
+          {lastMethod ? `last sign-in: ${lastMethod.replaceAll("-", " ")}` : "passwordless auth session"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut}>
+          <LogOutIcon className="mr-2 h-4 w-4" />
+          sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

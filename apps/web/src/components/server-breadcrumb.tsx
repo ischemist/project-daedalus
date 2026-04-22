@@ -4,6 +4,7 @@ import Link from "next/link"
 import { getBreadcrumbItems } from "@/lib/navigation"
 import {
   Breadcrumb,
+  BreadcrumbLink,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
@@ -18,7 +19,7 @@ export function ServerBreadcrumb({ segments }: ServerBreadcrumbProps) {
   const items = getBreadcrumbItems(segments)
 
   if (items.length === 0) {
-    return <p className="text-sm font-medium text-muted-foreground">daedalus</p>
+    return <p className="text-sm font-semibold text-teal-800 dark:text-teal-400">daedalus</p>
   }
 
   return (
@@ -28,14 +29,16 @@ export function ServerBreadcrumb({ segments }: ServerBreadcrumbProps) {
           <Fragment key={item.href}>
             <BreadcrumbItem>
               {item.isCurrent ? (
-                <BreadcrumbPage className="font-medium">{item.title}</BreadcrumbPage>
-              ) : (
-                <Link href={item.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                <BreadcrumbPage variant="aegean" className="font-semibold">
                   {item.title}
-                </Link>
+                </BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink variant="aegean" render={<Link href={item.href} />} className="text-sm">
+                  {item.title}
+                </BreadcrumbLink>
               )}
             </BreadcrumbItem>
-            {index < items.length - 1 ? <BreadcrumbSeparator /> : null}
+            {index < items.length - 1 ? <BreadcrumbSeparator variant="aegean" /> : null}
           </Fragment>
         ))}
       </BreadcrumbList>

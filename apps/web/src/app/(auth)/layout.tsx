@@ -20,7 +20,7 @@ export default function AuthenticatedLayout({
         <ServerAppSidebar />
       </Suspense>
 
-      <SidebarInset className="bg-background md:rounded-3xl">
+      <SidebarInset className="bg-background">
         <Suspense fallback={<AuthLayoutSkeleton />}>
           <AuthGate>
             <div className="flex min-h-svh flex-col">

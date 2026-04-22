@@ -3,7 +3,6 @@ import { LayoutDashboardIcon, type LucideIcon } from "lucide-react"
 export type AppNavItem = {
   href: string
   title: string
-  summary: string
   icon: LucideIcon
 }
 
@@ -11,7 +10,6 @@ export const appNavItems: AppNavItem[] = [
   {
     href: "/dashboard",
     title: "dashboard",
-    summary: "queue health, active workers, and system posture.",
     icon: LayoutDashboardIcon,
   },
 ]

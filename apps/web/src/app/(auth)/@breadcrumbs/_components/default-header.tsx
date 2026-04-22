@@ -3,7 +3,7 @@ import { ServerBreadcrumb } from "@/components/server-breadcrumb"
 
 export function DefaultHeader({ segments = [] }: { segments?: string[] }) {
   return (
-    <HeaderShell>
+    <HeaderShell variant="aegean">
       <ServerBreadcrumb segments={segments} />
     </HeaderShell>
   )

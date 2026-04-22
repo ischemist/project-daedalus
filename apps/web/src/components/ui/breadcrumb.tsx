@@ -2,6 +2,7 @@ import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 
+import { THEME_TOKENS, type ThemeVariant } from "@/lib/theme-tokens"
 import { cn } from "@/lib/utils"
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 
@@ -42,13 +43,20 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
 function BreadcrumbLink({
   className,
   render,
+  variant,
   ...props
-}: useRender.ComponentProps<"a">) {
+}: useRender.ComponentProps<"a"> & {
+  variant?: ThemeVariant
+}) {
   return useRender({
     defaultTagName: "a",
     props: mergeProps<"a">(
       {
-        className: cn("transition-colors hover:text-foreground", className),
+        className: cn(
+          "transition-colors hover:text-foreground",
+          variant && THEME_TOKENS.breadcrumbLinks[variant],
+          className
+        ),
       },
       props
     ),
@@ -59,14 +67,24 @@ function BreadcrumbLink({
   })
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({
+  className,
+  variant,
+  ...props
+}: React.ComponentProps<"span"> & {
+  variant?: ThemeVariant
+}) {
   return (
     <span
       data-slot="breadcrumb-page"
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("font-normal text-foreground", className)}
+      className={cn(
+        "font-normal text-foreground",
+        variant && THEME_TOKENS.breadcrumbPages[variant],
+        className
+      )}
       {...props}
     />
   )
@@ -75,14 +93,21 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
 function BreadcrumbSeparator({
   children,
   className,
+  variant,
   ...props
-}: React.ComponentProps<"li">) {
+}: React.ComponentProps<"li"> & {
+  variant?: ThemeVariant
+}) {
   return (
     <li
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("[&>svg]:size-3.5", className)}
+      className={cn(
+        "inline-flex items-center [&>svg]:size-3.5",
+        variant && THEME_TOKENS.breadcrumbSeparators[variant],
+        className
+      )}
       {...props}
     >
       {children ?? (

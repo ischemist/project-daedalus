@@ -146,9 +146,44 @@ export const THEME_TOKENS = {
 
   crumbBackgrounds: {
     default: '',
-    aegean: 'border-teal-300/50 bg-gradient-to-br from-teal-700/5 to-teal-600/5 dark:border-teal-500/30 dark:from-teal-700/10 dark:to-teal-600/5',
-    forge: 'border-amber-300/50 bg-gradient-to-br from-amber-700/5 to-amber-600/5 dark:border-amber-500/30 dark:from-amber-700/10 dark:to-amber-600/5',
-    anvil: 'border-slate-200/50 bg-gradient-to-br from-slate-500/10 to-slate-400/5 dark:border-slate-400/30 dark:from-slate-500/18 dark:to-slate-400/10',
+    aegean: 'border-teal-700/25 bg-gradient-to-br from-teal-700/5 to-teal-600/5 dark:border-teal-500/35 dark:from-teal-700/10 dark:to-teal-600/5',
+    forge: 'border-amber-700/25 bg-gradient-to-br from-amber-700/5 to-amber-600/5 dark:border-amber-500/35 dark:from-amber-700/10 dark:to-amber-600/5',
+    anvil: 'border-slate-500/30 bg-gradient-to-br from-slate-500/10 to-slate-400/5 dark:border-slate-400/35 dark:from-slate-500/18 dark:to-slate-400/10',
+  },
+
+  headerTriggers: {
+    default: '',
+    aegean: 'border-teal-700/20 text-teal-700 hover:border-teal-700/45 hover:bg-teal-700/5 hover:text-teal-800 dark:border-teal-500/25 dark:text-teal-400 dark:hover:border-teal-500/45 dark:hover:bg-teal-700/12 dark:hover:text-teal-300',
+    forge: 'border-amber-700/20 text-amber-700 hover:border-amber-700/45 hover:bg-amber-700/5 hover:text-amber-800 dark:border-amber-500/25 dark:text-amber-400 dark:hover:border-amber-500/45 dark:hover:bg-amber-700/12 dark:hover:text-amber-300',
+    anvil: 'border-slate-500/25 text-slate-700 hover:border-slate-500/45 hover:bg-slate-500/8 hover:text-slate-800 dark:border-slate-400/25 dark:text-slate-400 dark:hover:border-slate-400/45 dark:hover:bg-slate-500/12 dark:hover:text-slate-300',
+  },
+
+  headerSeparators: {
+    default: '',
+    aegean: 'bg-teal-700/25 dark:bg-teal-500/35',
+    forge: 'bg-amber-700/25 dark:bg-amber-500/35',
+    anvil: 'bg-slate-500/30 dark:bg-slate-400/35',
+  },
+
+  breadcrumbLinks: {
+    default: '',
+    aegean: 'text-teal-700/72 hover:text-teal-800 dark:text-teal-400/72 dark:hover:text-teal-300',
+    forge: 'text-amber-700/72 hover:text-amber-800 dark:text-amber-400/72 dark:hover:text-amber-300',
+    anvil: 'text-slate-700/72 hover:text-slate-800 dark:text-slate-400/72 dark:hover:text-slate-300',
+  },
+
+  breadcrumbPages: {
+    default: '',
+    aegean: 'text-teal-800 dark:text-teal-400',
+    forge: 'text-amber-800 dark:text-amber-400',
+    anvil: 'text-slate-800 dark:text-slate-300',
+  },
+
+  breadcrumbSeparators: {
+    default: '',
+    aegean: 'text-teal-500/40 dark:text-teal-400/30',
+    forge: 'text-amber-500/40 dark:text-amber-400/30',
+    anvil: 'text-slate-500/40 dark:text-slate-400/30',
   },
 
   pageHeaderBackgrounds: {
