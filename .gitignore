@@ -9,6 +9,7 @@ node_modules/
 .next/
 out/
 dist/
+apps/web/src/generated/prisma/
 
 # env files
 .env

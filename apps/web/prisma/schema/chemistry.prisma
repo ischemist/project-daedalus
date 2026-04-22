@@ -1,0 +1,187 @@
+// =================================================================================
+// chemistry & route topology
+// canonical sql representation for normalized retrosynthesis data.
+//
+// the canonical object is a route TREE that preserves planner output faithfully.
+// molecule / reaction identity is global; route nodes are occurrence-level.
+// lossy projections (collapsed dags, planner-specific annotations, scored views)
+// should be derived later instead of mutating this core.
+// =================================================================================
+
+enum VendorSource {
+  MCULE
+  LABNETWORK
+  EMOLECULES
+  SIGMA_ALDRICH
+  CHEMBRIDGE
+}
+
+model Molecule {
+  id                   String   @id @default(cuid())
+  inchikey             String   @unique
+  inchi                String?
+  inchikeyNoStereo     String?
+  inchikeyConnectivity String?
+  canonicalSmiles      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  reactionProducts Reaction[]      @relation("ReactionProduct")
+  reactionInputs   ReactionInput[]
+  routeTargets     Route[]         @relation("RouteTarget")
+  routeNodes       RouteNode[]
+  stockItems       StockItem[]
+
+  @@index([canonicalSmiles])
+  @@index([inchikeyNoStereo])
+  @@index([inchikeyConnectivity])
+}
+
+model Reaction {
+  id                   String   @id @default(cuid())
+  signature            String
+  canonicalizerVersion Int      @default(1)
+  productId            String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // deterministic hash of product + sorted reactant multiset topology
+  product Molecule        @relation("ReactionProduct", fields: [productId], references: [id], onDelete: Restrict)
+  inputs  ReactionInput[]
+  steps   RouteStep[]
+
+  @@unique([canonicalizerVersion, signature])
+  @@index([signature])
+  @@index([productId])
+}
+
+model ReactionInput {
+  id            String @id @default(cuid())
+  reactionId    String
+  moleculeId    String
+  position      Int // stable 0-based order within the canonical reaction
+  stoichiometry Int    @default(1)
+
+  reaction Reaction @relation(fields: [reactionId], references: [id], onDelete: Cascade)
+  molecule Molecule @relation(fields: [moleculeId], references: [id], onDelete: Restrict)
+
+  @@unique([reactionId, position])
+  @@index([moleculeId])
+  @@index([reactionId, moleculeId])
+}
+
+model Route {
+  id                    String   @id @default(cuid())
+  signature             String
+  canonicalizerVersion  Int      @default(1)
+  rootMoleculeId        String
+  rootNodeId            String?  @unique
+  length                Int
+  hasConvergentReaction Boolean
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // deterministic topology-only identity of the full route tree
+  rootMolecule Molecule    @relation("RouteTarget", fields: [rootMoleculeId], references: [id], onDelete: Restrict)
+  rootNode     RouteNode?  @relation("RouteRoot", fields: [rootNodeId], references: [id], onDelete: SetNull)
+  nodes        RouteNode[] @relation("RouteTopology")
+  steps        RouteStep[]
+
+  @@unique([canonicalizerVersion, signature])
+  @@index([signature])
+  @@index([rootMoleculeId])
+}
+
+model RouteNode {
+  id                          String @id @default(cuid())
+  routeId                     String
+  moleculeId                  String
+  nodeIndex                   Int // stable 0-based node order within this route tree
+  depth                       Int // root = 0
+  subtreeSignature            String // canonical identity for the subtree rooted at this node
+  subtreeCanonicalizerVersion Int    @default(1)
+
+  route           Route           @relation("RouteTopology", fields: [routeId], references: [id], onDelete: Cascade)
+  molecule        Molecule        @relation(fields: [moleculeId], references: [id], onDelete: Restrict)
+  rootForRoute    Route?          @relation("RouteRoot")
+  producedByStep  RouteStep?      @relation("StepProduct")
+  consumedAsInput RouteStepInput? @relation("ConsumedNode")
+
+  @@unique([routeId, nodeIndex])
+  @@index([moleculeId])
+  @@index([routeId, moleculeId])
+  @@index([routeId, depth])
+  @@index([subtreeCanonicalizerVersion, subtreeSignature])
+}
+
+model RouteStep {
+  id            String @id @default(cuid())
+  routeId       String
+  reactionId    String
+  productNodeId String @unique
+  stepIndex     Int // stable 0-based reaction-step order within this route tree
+
+  route       Route            @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  reaction    Reaction         @relation(fields: [reactionId], references: [id], onDelete: Restrict)
+  productNode RouteNode        @relation("StepProduct", fields: [productNodeId], references: [id], onDelete: Restrict)
+  inputs      RouteStepInput[]
+
+  @@unique([routeId, stepIndex])
+  @@index([reactionId])
+  @@index([routeId, reactionId])
+}
+
+model RouteStepInput {
+  id          String @id @default(cuid())
+  routeStepId String
+  routeNodeId String @unique // one parent step max per node keeps canonical routes tree-backed
+  position    Int // stable 0-based reactant order within the route step
+
+  routeStep RouteStep @relation(fields: [routeStepId], references: [id], onDelete: Cascade)
+  routeNode RouteNode @relation("ConsumedNode", fields: [routeNodeId], references: [id], onDelete: Restrict)
+
+  @@unique([routeStepId, position])
+}
+
+model Stock {
+  id          String   @id @default(cuid())
+  name        String   @unique // stable identifier used in urls, configs, and task params
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  snapshots StockSnapshot[]
+}
+
+model StockSnapshot {
+  id             String   @id @default(cuid())
+  stockId        String
+  version        Int
+  label          String?
+  membershipHash String?
+  createdAt      DateTime @default(now())
+
+  stock Stock       @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  items StockItem[]
+
+  @@unique([stockId, version])
+  @@index([membershipHash])
+}
+
+model StockItem {
+  id              String        @id @default(cuid())
+  stockSnapshotId String
+  moleculeId      String
+  ppg             Float?
+  source          VendorSource?
+  leadTime        String?
+  link            String?
+
+  stockSnapshot StockSnapshot @relation(fields: [stockSnapshotId], references: [id], onDelete: Cascade)
+  molecule      Molecule      @relation(fields: [moleculeId], references: [id], onDelete: Restrict)
+
+  @@unique([stockSnapshotId, moleculeId])
+  @@index([stockSnapshotId, source, ppg])
+  @@index([stockSnapshotId, ppg])
+  @@index([moleculeId])
+}

@@ -1,0 +1,11 @@
+.git
+.github
+.next
+node_modules
+apps/web/.next
+apps/web/node_modules
+apps/web/src/generated/prisma
+docker-compose.yml
+README.md
+docs
+AGENTS.md

@@ -1,0 +1,25 @@
+{
+  "name": "project-daedalus",
+  "private": true,
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "pnpm --filter @ischemist/web dev",
+    "build": "pnpm --filter @ischemist/web build",
+    "lint": "pnpm --filter @ischemist/web lint",
+    "typecheck": "pnpm --filter @ischemist/web typecheck",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @ischemist/web prisma:generate",
+    "db:migrate": "pnpm --filter @ischemist/web prisma:migrate:dev",
+    "db:deploy": "pnpm --filter @ischemist/web prisma:migrate:deploy",
+    "db:studio": "pnpm --filter @ischemist/web prisma:studio"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp"
+    ]
+  }
+}
