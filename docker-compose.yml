@@ -6,10 +6,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-daedalus}
+      PGDATA: /var/lib/postgresql/18/docker
     ports:
       - "5433:5432"
     volumes:
-      - postgres18_data:/var/lib/postgresql
+      - postgres18_data:/var/lib/postgresql/18/docker
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-daedalus}"]
       interval: 10s
@@ -20,6 +21,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/daedalus?schema=public}
+        BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-replace-with-a-32-character-secret}
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy

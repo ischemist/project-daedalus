@@ -123,7 +123,7 @@ model RouteStep {
 
   route       Route            @relation(fields: [routeId], references: [id], onDelete: Cascade)
   reaction    Reaction         @relation(fields: [reactionId], references: [id], onDelete: Restrict)
-  productNode RouteNode        @relation("StepProduct", fields: [productNodeId], references: [id], onDelete: Restrict)
+  productNode RouteNode        @relation("StepProduct", fields: [productNodeId], references: [id], onDelete: NoAction)
   inputs      RouteStepInput[]
 
   @@unique([routeId, stepIndex])
@@ -138,7 +138,7 @@ model RouteStepInput {
   position    Int // stable 0-based reactant order within the route step
 
   routeStep RouteStep @relation(fields: [routeStepId], references: [id], onDelete: Cascade)
-  routeNode RouteNode @relation("ConsumedNode", fields: [routeNodeId], references: [id], onDelete: Restrict)
+  routeNode RouteNode @relation("ConsumedNode", fields: [routeNodeId], references: [id], onDelete: NoAction)
 
   @@unique([routeStepId, position])
 }

@@ -247,13 +247,13 @@ ALTER TABLE "RouteStep" ADD CONSTRAINT "RouteStep_routeId_fkey" FOREIGN KEY ("ro
 ALTER TABLE "RouteStep" ADD CONSTRAINT "RouteStep_reactionId_fkey" FOREIGN KEY ("reactionId") REFERENCES "Reaction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RouteStep" ADD CONSTRAINT "RouteStep_productNodeId_fkey" FOREIGN KEY ("productNodeId") REFERENCES "RouteNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RouteStep" ADD CONSTRAINT "RouteStep_productNodeId_fkey" FOREIGN KEY ("productNodeId") REFERENCES "RouteNode"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RouteStepInput" ADD CONSTRAINT "RouteStepInput_routeStepId_fkey" FOREIGN KEY ("routeStepId") REFERENCES "RouteStep"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RouteStepInput" ADD CONSTRAINT "RouteStepInput_routeNodeId_fkey" FOREIGN KEY ("routeNodeId") REFERENCES "RouteNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RouteStepInput" ADD CONSTRAINT "RouteStepInput_routeNodeId_fkey" FOREIGN KEY ("routeNodeId") REFERENCES "RouteNode"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StockSnapshot" ADD CONSTRAINT "StockSnapshot_stockId_fkey" FOREIGN KEY ("stockId") REFERENCES "Stock"("id") ON DELETE CASCADE ON UPDATE CASCADE;

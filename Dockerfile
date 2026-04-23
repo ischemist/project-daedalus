@@ -16,18 +16,19 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 
+ARG DATABASE_URL="postgresql://postgres:postgres@localhost:5432/daedalus?schema=public"
+ARG BETTER_AUTH_SECRET="build-placeholder-secret"
+ARG BETTER_AUTH_URL="http://localhost:3000"
+ENV DATABASE_URL="$DATABASE_URL" \
+    BETTER_AUTH_SECRET="$BETTER_AUTH_SECRET" \
+    BETTER_AUTH_URL="$BETTER_AUTH_URL"
+
 COPY --from=deps /app /app
 COPY . .
 
-RUN DATABASE_URL="postgresql://postgres:postgres@localhost:5432/daedalus?schema=public" \
-    BETTER_AUTH_SECRET="docker-build-secret-01234567890123456789" \
-    BETTER_AUTH_URL="http://localhost:3000" \
-    pnpm db:generate
+RUN pnpm db:generate
 
-RUN DATABASE_URL="postgresql://postgres:postgres@localhost:5432/daedalus?schema=public" \
-    BETTER_AUTH_SECRET="docker-build-secret-01234567890123456789" \
-    BETTER_AUTH_URL="http://localhost:3000" \
-    pnpm build
+RUN pnpm build
 
 FROM base AS runner
 

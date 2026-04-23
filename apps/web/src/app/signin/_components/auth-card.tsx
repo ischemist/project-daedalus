@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useSyncExternalStore } from "react"
+import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { MailIcon } from "lucide-react"
 
@@ -31,7 +31,7 @@ function getErrorMessage(error: unknown) {
 
 function getRedirectTo(searchParams: ReturnType<typeof useSearchParams>) {
   const nextPath = searchParams.get("redirectTo")
-  return nextPath?.startsWith("/") ? nextPath : "/dashboard"
+  return nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard"
 }
 
 function GoogleIcon() {
@@ -61,20 +61,14 @@ function LastUsedPill() {
   )
 }
 
-function subscribeToLastLoginMethod() {
-  return () => {}
-}
-
 export function AuthCard({ oauthProviders }: AuthCardProps) {
   const [email, setEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [socialPending, setSocialPending] = useState<SocialProvider | null>(null)
-  const lastMethod = useSyncExternalStore(
-    subscribeToLastLoginMethod,
-    () => authClient.getLastUsedLoginMethod(),
-    () => null,
+  const [lastMethod] = useState<string | null>(() =>
+    typeof document === "undefined" ? null : authClient.getLastUsedLoginMethod(),
   )
   const searchParams = useSearchParams()
   const hasOauth = oauthProviders.github || oauthProviders.google
@@ -206,7 +200,7 @@ export function AuthCard({ oauthProviders }: AuthCardProps) {
         </div>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+        {notice ? <p className="text-sm text-teal-700 dark:text-teal-400">{notice}</p> : null}
 
         <div className="relative">
           <Button
