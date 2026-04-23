@@ -22,7 +22,7 @@ jobs:
       - name: assign labels from commits
         if: github.event_name == 'pull_request'
         id: assign-labels
-        uses: mauroalderete/action-assign-labels@v1
+        uses: mauroalderete/action-assign-labels@671a4ca2da0f900464c58b8b5540a1e07133e915 # v1
         with:
           pull-request-number: ${{ github.event.pull_request.number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -55,6 +55,6 @@ jobs:
           maintain-labels-not-matched: false
           apply-changes: true
 
-      - uses: release-drafter/release-drafter@v6.0.0
+      - uses: release-drafter/release-drafter@3f0f87098bd6b5c5b9a36d49c41d998ea58f9348 # v6.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
