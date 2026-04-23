@@ -41,16 +41,8 @@ function FamilySection({
     | "forgeOutline"
     | "anvilOutline"
     | "destructiveOutline"
-  ghostVariant:
-    | "aegeanGhost"
-    | "forgeGhost"
-    | "anvilGhost"
-    | "destructiveGhost"
-  solidVariant:
-    | "aegeanSolid"
-    | "forgeSolid"
-    | "anvilSolid"
-    | "destructiveSolid"
+  ghostVariant: "aegeanGhost" | "forgeGhost" | "anvilGhost" | "destructiveGhost"
+  solidVariant: "aegeanSolid" | "forgeSolid" | "anvilSolid" | "destructiveSolid"
   heroLabel: string
   heroIcon: React.ComponentType<{ className?: string }>
   heroSkewClass: string
@@ -64,16 +56,14 @@ function FamilySection({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className={`mb-1 text-lg font-semibold ${headerClass}`}>
-          {title}
-        </h2>
+        <h2 className={`mb-1 text-lg font-semibold ${headerClass}`}>{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8">
         {/* left: primary variants */}
         <div className="space-y-4">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
             primary variants
           </h3>
 
@@ -109,7 +99,7 @@ function FamilySection({
 
         {/* right: secondary & UI variants */}
         <div className="space-y-4">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
             secondary & UI variants
           </h3>
 
@@ -166,13 +156,13 @@ export function ButtonsSection() {
           <h1 className="mb-2 text-3xl font-semibold tracking-tight">
             button design system
           </h1>
-          <p className="text-muted-foreground max-w-3xl">
+          <p className="max-w-3xl text-muted-foreground">
             three themed button families plus destructive and neutral utility
             variants. family names map to semantic roles in the retrosynthesis
-            platform — <em>aegean</em> for platform identity,{" "}
-            <em>forge</em> for work-enqueuing actions, <em>anvil</em> for
-            infrastructure chrome. each family provides a gradient primary,
-            outline, ghost, and solid sub-variant.
+            platform — <em>aegean</em> for platform identity, <em>forge</em> for
+            work-enqueuing actions, <em>anvil</em> for infrastructure chrome.
+            each family provides a gradient primary, outline, ghost, and solid
+            sub-variant.
           </p>
         </div>
 
@@ -268,7 +258,7 @@ export function ButtonsSection() {
           <div className="grid grid-cols-2 gap-8">
             {/* left: standard variants */}
             <div className="space-y-4">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 standard variants
               </h3>
               <div className="flex flex-wrap items-center gap-3">
@@ -297,7 +287,7 @@ export function ButtonsSection() {
 
             {/* right: icon-only variants */}
             <div className="space-y-4">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 icon-only variants
               </h3>
               <div className="flex flex-wrap items-center gap-2">
@@ -323,7 +313,7 @@ export function ButtonsSection() {
               </div>
 
               {/* all icon sizes */}
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 icon sizes
               </h3>
               <div className="flex flex-wrap items-end gap-2">
@@ -345,7 +335,7 @@ export function ButtonsSection() {
 
           {/* full size range */}
           <div className="space-y-3">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
               size scale
             </h3>
             <div className="flex flex-wrap items-end gap-3">

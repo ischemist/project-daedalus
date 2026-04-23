@@ -11,7 +11,11 @@ import {
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { THEME_TOKENS } from "@/lib/theme-tokens"
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+} from "lucide-react"
 
 type CalendarVariant = "default" | "aegean" | "forge" | "anvil"
 
@@ -46,7 +50,9 @@ function Calendar({
       locale={locale}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString(locale?.code ?? "default", { month: "short" }),
+          date.toLocaleString(locale?.code ?? "default", {
+            month: "short",
+          }),
         ...formatters,
       }}
       classNames={{
@@ -118,7 +124,11 @@ function Calendar({
         range_start: cn(tokens.rangeStart, defaultClassNames.range_start),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn(tokens.rangeEnd, defaultClassNames.range_end),
-        today: cn(tokens.today, "data-[selected=true]:rounded-none", defaultClassNames.today),
+        today: cn(
+          tokens.today,
+          "data-[selected=true]:rounded-none",
+          defaultClassNames.today
+        ),
         outside: cn(
           "text-muted-foreground aria-selected:text-muted-foreground",
           defaultClassNames.outside
@@ -150,7 +160,10 @@ function Calendar({
 
           if (orientation === "right") {
             return (
-              <ChevronRightIcon className={cn("size-4", className)} {...props} />
+              <ChevronRightIcon
+                className={cn("size-4", className)}
+                {...props}
+              />
             )
           }
 
@@ -159,7 +172,11 @@ function Calendar({
           )
         },
         DayButton: ({ ...buttonProps }) => (
-          <CalendarDayButton locale={locale} variant={variant} {...buttonProps} />
+          <CalendarDayButton
+            locale={locale}
+            variant={variant}
+            {...buttonProps}
+          />
         ),
         WeekNumber: ({ children, ...props }) => {
           return (

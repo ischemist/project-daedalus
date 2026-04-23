@@ -1,0 +1,162 @@
+{
+  "languages": {
+    "TypeScript": {
+      "prettier": {
+        "allowed": false
+      },
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "TSX": {
+      "prettier": {
+        "allowed": false
+      },
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "JavaScript": {
+      "prettier": {
+        "allowed": false
+      },
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "JSX": {
+      "prettier": {
+        "allowed": false
+      },
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "JSON": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false
+    },
+    "JSONC": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false
+    },
+    "CSS": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false
+    },
+    "SCSS": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false
+    },
+    "HTML": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "Markdown": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "MDX": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false,
+      "preferred_line_length": 80,
+      "soft_wrap": "preferred_line_length"
+    },
+    "YAML": {
+      "formatter": {
+        "external": {
+          "command": "pnpm",
+          "arguments": ["exec", "oxfmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on",
+      "tab_size": 2,
+      "hard_tabs": false
+    }
+  }
+}

@@ -15,7 +15,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type NavUserProps = {
   name: string | null
@@ -27,7 +31,7 @@ export function NavUser({ name, email, image }: NavUserProps) {
   const router = useRouter()
   const { isMobile } = useSidebar()
   const [lastMethod] = useState<string | null>(() =>
-    typeof document === "undefined" ? null : authClient.getLastUsedLoginMethod(),
+    typeof document === "undefined" ? null : authClient.getLastUsedLoginMethod()
   )
 
   const displayName = name ?? "operator"
@@ -62,7 +66,9 @@ export function NavUser({ name, email, image }: NavUserProps) {
         >
           <Avatar className="h-7 w-7">
             <AvatarImage src={image ?? undefined} alt={displayName} />
-            <AvatarFallback className="text-xs">{initials || "O"}</AvatarFallback>
+            <AvatarFallback className="text-xs">
+              {initials || "O"}
+            </AvatarFallback>
           </Avatar>
         </TooltipTrigger>
         <TooltipContent side="top">{displayName}</TooltipContent>
@@ -76,7 +82,9 @@ export function NavUser({ name, email, image }: NavUserProps) {
         <DropdownMenuLabel className="flex items-center gap-3 py-3">
           <Avatar className="h-9 w-9 rounded-lg">
             <AvatarImage src={image ?? undefined} alt={displayName} />
-            <AvatarFallback className="rounded-lg">{initials || "O"}</AvatarFallback>
+            <AvatarFallback className="rounded-lg">
+              {initials || "O"}
+            </AvatarFallback>
           </Avatar>
           <div className="grid text-left">
             <span className="font-medium">{displayName}</span>
@@ -86,10 +94,16 @@ export function NavUser({ name, email, image }: NavUserProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           <ShieldCheckIcon className="mr-2 h-4 w-4" />
-          {lastMethod ? `last sign-in: ${lastMethod.replaceAll("-", " ")}` : "passwordless auth session"}
+          {lastMethod
+            ? `last sign-in: ${lastMethod.replaceAll("-", " ")}`
+            : "passwordless auth session"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem
+          onClick={() => {
+            void signOut()
+          }}
+        >
           <LogOutIcon className="mr-2 h-4 w-4" />
           sign out
         </DropdownMenuItem>

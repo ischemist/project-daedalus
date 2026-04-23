@@ -1,5 +1,11 @@
 import { changelogEntries } from "@/lib/changelog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 export default function ChangelogPage() {
   return (
@@ -18,7 +24,9 @@ export default function ChangelogPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 {entry.changes.map((change) => (
                   <li key={change} className="flex gap-2">
-                    <span className="mt-1 text-xs text-teal-600 dark:text-teal-400">•</span>
+                    <span className="mt-1 text-xs text-teal-600 dark:text-teal-400">
+                      •
+                    </span>
                     <span>{change}</span>
                   </li>
                 ))}

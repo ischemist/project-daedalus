@@ -118,9 +118,21 @@ const FAMILIES: {
   label: string
   headerClass: string
 }[] = [
-  { key: "aegean", label: "aegean", headerClass: "text-teal-800 dark:text-teal-500" },
-  { key: "forge", label: "forge", headerClass: "text-amber-800 dark:text-amber-500" },
-  { key: "anvil", label: "anvil", headerClass: "text-slate-700 dark:text-slate-400" },
+  {
+    key: "aegean",
+    label: "aegean",
+    headerClass: "text-teal-800 dark:text-teal-500",
+  },
+  {
+    key: "forge",
+    label: "forge",
+    headerClass: "text-amber-800 dark:text-amber-500",
+  },
+  {
+    key: "anvil",
+    label: "anvil",
+    headerClass: "text-slate-700 dark:text-slate-400",
+  },
 ]
 
 type PopoverDatePickerProps = {
@@ -141,8 +153,9 @@ function PopoverDatePicker({
   onSelect,
 }: PopoverDatePickerProps) {
   const [open, setOpen] = useState(false)
-  const buttonVariant =
-    `${variant}Outline` as React.ComponentProps<typeof Button>["variant"]
+  const buttonVariant = `${variant}Outline` as React.ComponentProps<
+    typeof Button
+  >["variant"]
 
   return (
     <div className="w-full">
@@ -295,7 +308,13 @@ const STATUS_DEFS: StatusDef[] = [
   },
 ]
 
-function FilledBadge({ def, density }: { def: StatusDef; density: "full" | "compact" | "icon" }) {
+function FilledBadge({
+  def,
+  density,
+}: {
+  def: StatusDef
+  density: "full" | "compact" | "icon"
+}) {
   const Icon = def.icon
   return (
     <Badge
@@ -309,7 +328,13 @@ function FilledBadge({ def, density }: { def: StatusDef; density: "full" | "comp
   )
 }
 
-function NeutralBadge({ def, density }: { def: StatusDef; density: "full" | "compact" | "icon" }) {
+function NeutralBadge({
+  def,
+  density,
+}: {
+  def: StatusDef
+  density: "full" | "compact" | "icon"
+}) {
   const Icon = def.icon
   return (
     <Badge
@@ -323,7 +348,13 @@ function NeutralBadge({ def, density }: { def: StatusDef; density: "full" | "com
   )
 }
 
-function BorderBadge({ def, density }: { def: StatusDef; density: "full" | "compact" | "icon" }) {
+function BorderBadge({
+  def,
+  density,
+}: {
+  def: StatusDef
+  density: "full" | "compact" | "icon"
+}) {
   const Icon = def.icon
   return (
     <Badge
@@ -343,38 +374,77 @@ const MOCK_TASKS: {
   status: TaskStatus
   time: string
 }[] = [
-  { smiles: "CC(=O)Oc1ccccc1C(=O)O", model: "ariadne", status: "succeeded", time: "42.3s" },
-  { smiles: "c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34", model: "ariadne", status: "running", time: "\u2014" },
-  { smiles: "CC(C)Cc1ccc(C(C)C(=O)O)cc1", model: "retro*", status: "queued", time: "\u2014" },
-  { smiles: "OC(=O)c1ccccc1O", model: "synplanner", status: "failed", time: "12.1s" },
-  { smiles: "CC(=O)NC1CCC(O)CC1", model: "ariadne", status: "leased", time: "\u2014" },
-  { smiles: "c1ccncc1", model: "retro*", status: "cancelled", time: "\u2014" },
-  { smiles: "CC(O)C(=O)O", model: "synplanner", status: "expired", time: "300.0s" },
+  {
+    smiles: "CC(=O)Oc1ccccc1C(=O)O",
+    model: "ariadne",
+    status: "succeeded",
+    time: "42.3s",
+  },
+  {
+    smiles: "c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34",
+    model: "ariadne",
+    status: "running",
+    time: "\u2014",
+  },
+  {
+    smiles: "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+    model: "retro*",
+    status: "queued",
+    time: "\u2014",
+  },
+  {
+    smiles: "OC(=O)c1ccccc1O",
+    model: "synplanner",
+    status: "failed",
+    time: "12.1s",
+  },
+  {
+    smiles: "CC(=O)NC1CCC(O)CC1",
+    model: "ariadne",
+    status: "leased",
+    time: "\u2014",
+  },
+  {
+    smiles: "c1ccncc1",
+    model: "retro*",
+    status: "cancelled",
+    time: "\u2014",
+  },
+  {
+    smiles: "CC(O)C(=O)O",
+    model: "synplanner",
+    status: "expired",
+    time: "300.0s",
+  },
 ]
 
 const MOLECULE_STATES = [
   {
     label: "in-stock",
-    badge: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+    badge:
+      "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
   },
   {
     label: "default",
-    badge: "bg-gray-500/15 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400",
+    badge:
+      "bg-gray-500/15 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400",
   },
   {
     label: "match",
-    badge: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+    badge:
+      "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
   },
   {
     label: "extension",
-    badge: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+    badge:
+      "bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
   },
   {
     label: "ghost",
-    badge: "bg-gray-500/10 text-gray-500 dark:bg-gray-500/15 dark:text-gray-400 border-dashed border-gray-400",
+    badge:
+      "bg-gray-500/10 text-gray-500 dark:bg-gray-500/15 dark:text-gray-400 border-dashed border-gray-400",
   },
 ]
-
 
 // ─── interaction section ───────────────────────────────────────
 
@@ -382,22 +452,30 @@ export function InteractionSection() {
   const [showStatusBar, setShowStatusBar] = useState(true)
   const [showPanel, setShowPanel] = useState(false)
   const [dropdownRadio, setDropdownRadio] = useState("system")
-  const [sliderValues, setSliderValues] = useState<Record<ColorFamily, number[]>>({
+  const [sliderValues, setSliderValues] = useState<
+    Record<ColorFamily, number[]>
+  >({
     aegean: [65],
     forge: [42],
     anvil: [80],
   })
-  const [popoverDates, setPopoverDates] = useState<Record<ColorFamily, Date | undefined>>({
+  const [popoverDates, setPopoverDates] = useState<
+    Record<ColorFamily, Date | undefined>
+  >({
     aegean: undefined,
     forge: undefined,
     anvil: undefined,
   })
-  const [inlineDates, setInlineDates] = useState<Record<ColorFamily, Date | undefined>>({
+  const [inlineDates, setInlineDates] = useState<
+    Record<ColorFamily, Date | undefined>
+  >({
     aegean: undefined,
     forge: undefined,
     anvil: undefined,
   })
-  const [ranges, setRanges] = useState<Record<ColorFamily, DateRange | undefined>>({
+  const [ranges, setRanges] = useState<
+    Record<ColorFamily, DateRange | undefined>
+  >({
     aegean: undefined,
     forge: undefined,
     anvil: undefined,
@@ -415,7 +493,7 @@ export function InteractionSection() {
           <h1 className="mb-2 text-3xl font-semibold tracking-tight">
             interaction components
           </h1>
-          <p className="text-muted-foreground max-w-3xl">
+          <p className="max-w-3xl text-muted-foreground">
             cards, inputs, textareas, checkboxes, switches, radio groups,
             progress bars, sliders, and tabs — each shown with themed variants
             for aegean, forge, and anvil.
@@ -426,7 +504,8 @@ export function InteractionSection() {
         <section className="space-y-4">
           <h2 className="text-2xl font-bold tracking-tight">Cards</h2>
           <p className="text-sm text-muted-foreground">
-            Default plus three family-themed cards with chemistry-domain content.
+            Default plus three family-themed cards with chemistry-domain
+            content.
           </p>
           <div className="grid gap-6 md:grid-cols-2">
             {/* default card */}
@@ -466,8 +545,8 @@ export function InteractionSection() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Aegean-themed card for platform identity surfaces. Teal borders
-                  and header text signal exploration context.
+                  Aegean-themed card for platform identity surfaces. Teal
+                  borders and header text signal exploration context.
                 </p>
               </CardContent>
               <CardFooter className="gap-2">
@@ -556,10 +635,7 @@ export function InteractionSection() {
               <Label className={text.aegean}>Target SMILES</Label>
               <Input
                 placeholder="CC(=O)Oc1ccccc1C(=O)O"
-                className={cn(
-                  "font-mono",
-                  THEME_TOKENS.inputs.aegean
-                )}
+                className={cn("font-mono", THEME_TOKENS.inputs.aegean)}
               />
             </div>
             <div className="space-y-2">
@@ -624,25 +700,20 @@ export function InteractionSection() {
               <div key={key} className="space-y-3">
                 <span
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold tracking-wider uppercase",
                     text[key]
                   )}
                 >
                   {label}
                 </span>
                 <div className="flex items-center gap-3">
-                  <Checkbox
-                    defaultChecked
-                    variant={key}
-                  />
+                  <Checkbox defaultChecked variant={key} />
                   <Label className={cn("text-sm", text[key])}>
                     Include stereochemistry
                   </Label>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Checkbox
-                    variant={key}
-                  />
+                  <Checkbox variant={key} />
                   <Label className="text-sm">Use retro* scoring</Label>
                 </div>
               </div>
@@ -661,17 +732,14 @@ export function InteractionSection() {
               <div key={key} className="space-y-3">
                 <span
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold tracking-wider uppercase",
                     text[key]
                   )}
                 >
                   {label}
                 </span>
                 <div className="flex items-center gap-3">
-                  <Switch
-                    defaultChecked
-                    variant={key}
-                  />
+                  <Switch defaultChecked variant={key} />
                   <Label className={cn("text-sm", text[key])}>
                     Parallel execution
                   </Label>
@@ -696,7 +764,7 @@ export function InteractionSection() {
               <div key={key} className="space-y-3">
                 <span
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold tracking-wider uppercase",
                     text[key]
                   )}
                 >
@@ -704,25 +772,15 @@ export function InteractionSection() {
                 </span>
                 <RadioGroup defaultValue="option-1">
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem
-                      value="option-1"
-                      variant={key}
-                    />
+                    <RadioGroupItem value="option-1" variant={key} />
                     <Label className="text-sm">ariadne</Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem
-                      value="option-2"
-                      variant={key}
-                    />
+                    <RadioGroupItem value="option-2" variant={key} />
                     <Label className="text-sm">retrostar</Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem
-                      value="option-3"
-                      variant={key}
-                      disabled
-                    />
+                    <RadioGroupItem value="option-3" variant={key} disabled />
                     <Label className="text-sm text-muted-foreground">
                       synplanner (coming soon)
                     </Label>
@@ -752,7 +810,7 @@ export function InteractionSection() {
                 <div key={key} className="space-y-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wider",
+                      "text-xs font-semibold tracking-wider uppercase",
                       text[key]
                     )}
                   >
@@ -767,9 +825,7 @@ export function InteractionSection() {
                       className={THEME_TOKENS.progressBar[key].track}
                     >
                       <ProgressIndicator
-                        className={
-                          THEME_TOKENS.progressBar[key].indicator
-                        }
+                        className={THEME_TOKENS.progressBar[key].indicator}
                       />
                     </ProgressTrack>
                   </Progress>
@@ -799,7 +855,7 @@ export function InteractionSection() {
                     <Label className={cn("text-sm", text[key])}>
                       {paramLabel}
                     </Label>
-                    <span className="text-xs tabular-nums text-muted-foreground">
+                    <span className="text-xs text-muted-foreground tabular-nums">
                       {sliderValues[key][0]}
                     </span>
                   </div>
@@ -841,7 +897,7 @@ export function InteractionSection() {
                 <div key={key} className="space-y-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wider",
+                      "text-xs font-semibold tracking-wider uppercase",
                       text[key]
                     )}
                   >
@@ -849,9 +905,15 @@ export function InteractionSection() {
                   </span>
                   <Tabs defaultValue="tab-1">
                     <TabsList theme={key}>
-                      <TabsTrigger theme={key} value="tab-1">routes</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-2">metrics</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-3">logs</TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-1">
+                        routes
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-2">
+                        metrics
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-3">
+                        logs
+                      </TabsTrigger>
                     </TabsList>
                     <TabsContent value="tab-1">
                       <p className="pt-2 text-sm text-muted-foreground">
@@ -884,7 +946,7 @@ export function InteractionSection() {
                 <div key={key} className="space-y-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wider",
+                      "text-xs font-semibold tracking-wider uppercase",
                       text[key]
                     )}
                   >
@@ -892,17 +954,23 @@ export function InteractionSection() {
                   </span>
                   <Tabs defaultValue="tab-1">
                     <TabsList variant="line" theme={key}>
-                      <TabsTrigger theme={key} value="tab-1">SMILES</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-2">InChIKey</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-3">tree</TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-1">
+                        SMILES
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-2">
+                        InChIKey
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-3">
+                        tree
+                      </TabsTrigger>
                     </TabsList>
                     <TabsContent value="tab-1">
-                      <p className="pt-2 text-sm font-mono text-muted-foreground">
+                      <p className="pt-2 font-mono text-sm text-muted-foreground">
                         CC(=O)Oc1ccccc1C(=O)O
                       </p>
                     </TabsContent>
                     <TabsContent value="tab-2">
-                      <p className="pt-2 text-sm font-mono text-muted-foreground">
+                      <p className="pt-2 font-mono text-sm text-muted-foreground">
                         BSYNRYMUTXBXSQ-UHFFFAOYSA-N
                       </p>
                     </TabsContent>
@@ -927,7 +995,7 @@ export function InteractionSection() {
                 <div key={key} className="space-y-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wider",
+                      "text-xs font-semibold tracking-wider uppercase",
                       text[key]
                     )}
                   >
@@ -935,9 +1003,15 @@ export function InteractionSection() {
                   </span>
                   <Tabs defaultValue="tab-1">
                     <TabsList variant="filled" theme={key}>
-                      <TabsTrigger theme={key} value="tab-1">pending</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-2">running</TabsTrigger>
-                      <TabsTrigger theme={key} value="tab-3">completed</TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-1">
+                        pending
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-2">
+                        running
+                      </TabsTrigger>
+                      <TabsTrigger theme={key} value="tab-3">
+                        completed
+                      </TabsTrigger>
                     </TabsList>
                     <TabsContent value="tab-1">
                       <p className="pt-2 text-sm text-muted-foreground">
@@ -993,9 +1067,12 @@ export function InteractionSection() {
         {/* ── 10b. task status badges ── */}
         <section className="space-y-10">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Task Status Badges</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Task Status Badges
+            </h2>
             <p className="text-sm text-muted-foreground">
-              seven task states shown in three visual styles, compared side by side.
+              seven task states shown in three visual styles, compared side by
+              side.
             </p>
           </div>
 
@@ -1003,7 +1080,9 @@ export function InteractionSection() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* style A: colored fill */}
             <div>
-              <h3 className="mb-1 text-sm font-medium">style A: colored fill</h3>
+              <h3 className="mb-1 text-sm font-medium">
+                style A: colored fill
+              </h3>
               <p className="mb-3 text-xs text-muted-foreground">
                 colored bg + colored text. high signal, strong visual grouping.
               </p>
@@ -1018,7 +1097,8 @@ export function InteractionSection() {
             <div>
               <h3 className="mb-1 text-sm font-medium">style B: neutral</h3>
               <p className="mb-3 text-xs text-muted-foreground">
-                stone bg, tinted icon only. quieter, lets the icon carry meaning.
+                stone bg, tinted icon only. quieter, lets the icon carry
+                meaning.
               </p>
               <div className="flex flex-col gap-2">
                 {STATUS_DEFS.map((def) => (
@@ -1029,7 +1109,9 @@ export function InteractionSection() {
 
             {/* style C: colored border */}
             <div>
-              <h3 className="mb-1 text-sm font-medium">style C: colored border</h3>
+              <h3 className="mb-1 text-sm font-medium">
+                style C: colored border
+              </h3>
               <p className="mb-3 text-xs text-muted-foreground">
                 no bg fill, colored border + icon + text. lighter footprint.
               </p>
@@ -1046,20 +1128,35 @@ export function InteractionSection() {
             <div>
               <h3 className="text-sm font-medium">badge density</h3>
               <p className="text-xs text-muted-foreground">
-                full (icon + label), compact (icon + short code), and icon-only for each style.
+                full (icon + label), compact (icon + short code), and icon-only
+                for each style.
               </p>
             </div>
 
             {(["A", "B", "C"] as const).map((style) => {
-              const Comp = style === "A" ? FilledBadge : style === "B" ? NeutralBadge : BorderBadge
-              const label = style === "A" ? "colored fill" : style === "B" ? "neutral" : "colored border"
+              const Comp =
+                style === "A"
+                  ? FilledBadge
+                  : style === "B"
+                    ? NeutralBadge
+                    : BorderBadge
+              const label =
+                style === "A"
+                  ? "colored fill"
+                  : style === "B"
+                    ? "neutral"
+                    : "colored border"
               return (
                 <div key={style}>
-                  <h4 className="mb-3 text-sm font-medium text-muted-foreground">style {style}: {label}</h4>
+                  <h4 className="mb-3 text-sm font-medium text-muted-foreground">
+                    style {style}: {label}
+                  </h4>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {(["full", "compact", "icon"] as const).map((density) => (
                       <div key={density}>
-                        <p className="mb-2 text-xs text-muted-foreground">{density}</p>
+                        <p className="mb-2 text-xs text-muted-foreground">
+                          {density}
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {STATUS_DEFS.map((def) => (
                             <Comp key={def.label} def={def} density={density} />
@@ -1086,10 +1183,18 @@ export function InteractionSection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-[1.5px] border-border bg-muted/30">
-                    <th className="p-3 text-left font-medium text-muted-foreground">status</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">model</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">target</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">runtime</th>
+                    <th className="p-3 text-left font-medium text-muted-foreground">
+                      status
+                    </th>
+                    <th className="p-3 text-left font-medium text-muted-foreground">
+                      model
+                    </th>
+                    <th className="p-3 text-left font-medium text-muted-foreground">
+                      target
+                    </th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">
+                      runtime
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1105,7 +1210,9 @@ export function InteractionSection() {
                         </td>
                         <td className="p-3">{row.model}</td>
                         <td className="p-3 font-mono text-xs">{row.smiles}</td>
-                        <td className="p-3 text-right font-mono text-xs text-muted-foreground">{row.time}</td>
+                        <td className="p-3 text-right font-mono text-xs text-muted-foreground">
+                          {row.time}
+                        </td>
                       </tr>
                     )
                   })}
@@ -1119,7 +1226,8 @@ export function InteractionSection() {
             <div>
               <h3 className="text-sm font-medium">molecule state badges</h3>
               <p className="text-xs text-muted-foreground">
-                from the route visualization layer — chemistry-specific, independent of page theme.
+                from the route visualization layer — chemistry-specific,
+                independent of page theme.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -1390,9 +1498,7 @@ export function InteractionSection() {
 
         {/* ── 13. command palette ── */}
         <section className="space-y-4">
-          <h2 className="text-2xl font-bold tracking-tight">
-            Command Palette
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Command Palette</h2>
           <p className="text-sm text-muted-foreground">
             Inline command palette with themed items across variant families.
           </p>
@@ -1445,9 +1551,9 @@ export function InteractionSection() {
               <AccordionTrigger>What is daedalus?</AccordionTrigger>
               <AccordionContent>
                 Daedalus is the orchestration and execution layer for the
-                ischemist retrosynthesis ecosystem. It accepts synthesis planning
-                tasks, schedules them with fairness constraints, and executes
-                them against heterogeneous model runtimes.
+                ischemist retrosynthesis ecosystem. It accepts synthesis
+                planning tasks, schedules them with fairness constraints, and
+                executes them against heterogeneous model runtimes.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="how">
@@ -1462,14 +1568,12 @@ export function InteractionSection() {
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="runtimes">
-              <AccordionTrigger>
-                Where do model runtimes live?
-              </AccordionTrigger>
+              <AccordionTrigger>Where do model runtimes live?</AccordionTrigger>
               <AccordionContent>
                 Runtimes live in their own repositories (e.g. project-ariadne).
-                Daedalus defines the contract they implement but does not contain
-                model-specific code. This separation keeps the orchestration
-                layer model-agnostic.
+                Daedalus defines the contract they implement but does not
+                contain model-specific code. This separation keeps the
+                orchestration layer model-agnostic.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="fairness">
@@ -1494,7 +1598,9 @@ export function InteractionSection() {
           </p>
           <div className="flex flex-wrap gap-4">
             <Popover>
-              <PopoverTrigger render={<Button variant="aegeanOutline" size="sm" />}>
+              <PopoverTrigger
+                render={<Button variant="aegeanOutline" size="sm" />}
+              >
                 Task Info
               </PopoverTrigger>
               <PopoverContent variant="aegean">
@@ -1507,21 +1613,29 @@ export function InteractionSection() {
                 <div className="grid gap-2 pt-2">
                   <div className="grid grid-cols-3 items-center gap-4">
                     <Label className="text-xs">Model</Label>
-                    <span className="col-span-2 text-xs text-muted-foreground">ariadne-v2</span>
+                    <span className="col-span-2 text-xs text-muted-foreground">
+                      ariadne-v2
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 items-center gap-4">
                     <Label className="text-xs">Depth</Label>
-                    <span className="col-span-2 text-xs text-muted-foreground">5 steps</span>
+                    <span className="col-span-2 text-xs text-muted-foreground">
+                      5 steps
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 items-center gap-4">
                     <Label className="text-xs">Beam</Label>
-                    <span className="col-span-2 text-xs text-muted-foreground">10</span>
+                    <span className="col-span-2 text-xs text-muted-foreground">
+                      10
+                    </span>
                   </div>
                 </div>
               </PopoverContent>
             </Popover>
             <Popover>
-              <PopoverTrigger render={<Button variant="forgeOutline" size="sm" />}>
+              <PopoverTrigger
+                render={<Button variant="forgeOutline" size="sm" />}
+              >
                 Worker Status
               </PopoverTrigger>
               <PopoverContent variant="forge">
@@ -1539,7 +1653,9 @@ export function InteractionSection() {
               </PopoverContent>
             </Popover>
             <Popover>
-              <PopoverTrigger render={<Button variant="anvilOutline" size="sm" />}>
+              <PopoverTrigger
+                render={<Button variant="anvilOutline" size="sm" />}
+              >
                 Queue Info
               </PopoverTrigger>
               <PopoverContent variant="anvil">
@@ -1572,19 +1688,28 @@ export function InteractionSection() {
               popover date pickers
             </h3>
             <p className="text-xs text-muted-foreground">
-              a popover with a calendar inside, triggered by a button — one per family.
+              a popover with a calendar inside, triggered by a button — one per
+              family.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {FAMILIES.map(({ key, label }) => (
                 <div key={key} className="flex flex-col gap-3">
-                  <span className={cn("text-xs font-semibold uppercase tracking-wider", text[key])}>
+                  <span
+                    className={cn(
+                      "text-xs font-semibold tracking-wider uppercase",
+                      text[key]
+                    )}
+                  >
                     {label}
                   </span>
                   <PopoverDatePicker
                     variant={key}
                     value={popoverDates[key]}
                     onSelect={(date) =>
-                      setPopoverDates((prev) => ({ ...prev, [key]: date }))
+                      setPopoverDates((prev) => ({
+                        ...prev,
+                        [key]: date,
+                      }))
                     }
                   />
                 </div>
@@ -1605,9 +1730,7 @@ export function InteractionSection() {
                 <Card key={key} className={cn("border-[1.5px]", borders[key])}>
                   <CardHeader>
                     <CardTitle className={text[key]}>select a date</CardTitle>
-                    <CardDescription>
-                      click a day to select it.
-                    </CardDescription>
+                    <CardDescription>click a day to select it.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col items-start gap-4">
                     <Calendar
@@ -1615,7 +1738,10 @@ export function InteractionSection() {
                       mode="single"
                       selected={inlineDates[key]}
                       onSelect={(d) =>
-                        setInlineDates((prev) => ({ ...prev, [key]: d }))
+                        setInlineDates((prev) => ({
+                          ...prev,
+                          [key]: d,
+                        }))
                       }
                     />
                     <p className="text-sm text-muted-foreground">
@@ -1635,7 +1761,8 @@ export function InteractionSection() {
               inline range calendar
             </h3>
             <p className="text-xs text-muted-foreground">
-              a calendar in range mode — click to set start, click again to set end.
+              a calendar in range mode — click to set start, click again to set
+              end.
             </p>
             <div className="grid gap-6 md:grid-cols-3">
               {FAMILIES.map(({ key }) => (
@@ -1652,7 +1779,10 @@ export function InteractionSection() {
                       mode="range"
                       selected={ranges[key]}
                       onSelect={(r) =>
-                        setRanges((prev) => ({ ...prev, [key]: r }))
+                        setRanges((prev) => ({
+                          ...prev,
+                          [key]: r,
+                        }))
                       }
                     />
                     <p className="text-sm text-muted-foreground">
@@ -1674,7 +1804,8 @@ export function InteractionSection() {
               form-style date pickers
             </h3>
             <p className="text-xs text-muted-foreground">
-              three date pickers in a row, as they might appear in a synthesis job form.
+              three date pickers in a row, as they might appear in a synthesis
+              job form.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {(["start", "end", "deadline"] as const).map((field, i) => {
@@ -1692,7 +1823,10 @@ export function InteractionSection() {
                       variant={family.key}
                       value={formDates[field]}
                       onSelect={(date) =>
-                        setFormDates((prev) => ({ ...prev, [field]: date }))
+                        setFormDates((prev) => ({
+                          ...prev,
+                          [field]: date,
+                        }))
                       }
                     />
                   </div>
@@ -1713,7 +1847,7 @@ export function InteractionSection() {
               <div key={key} className="space-y-3">
                 <span
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold tracking-wider uppercase",
                     text[key]
                   )}
                 >
