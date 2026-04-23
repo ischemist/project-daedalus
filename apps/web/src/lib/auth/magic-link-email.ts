@@ -13,14 +13,21 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;")
 }
 
-export async function sendMagicLinkEmail({ email, url }: { email: string; url: string }) {
+export async function sendMagicLinkEmail({
+  email,
+  url,
+}: {
+  email: string
+  url: string
+}) {
   const subject = "your daedalus magic link"
   const preheader = "one-tap sign-in to daedalus. expires in 10 minutes."
   const safeUrl = escapeHtml(url)
 
   const sansStack =
     "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
-  const serifStack = "'iowan old style','Palatino Linotype',Palatino,Georgia,serif"
+  const serifStack =
+    "'iowan old style','Palatino Linotype',Palatino,Georgia,serif"
 
   // aegean palette — matches the signin card (teal-700 accents on cool neutrals)
   const ink = "#0f172a" // slate-900

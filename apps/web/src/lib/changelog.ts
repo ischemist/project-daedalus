@@ -11,7 +11,8 @@ export const changelogEntries: ChangelogEntry[] = [
     version: "0.1.0",
     date: "2026-04-22",
     title: "sidebar chrome refresh",
-    summary: "aligned the auth shell sidebar with grow's denser navigation and footer pattern.",
+    summary:
+      "aligned the auth shell sidebar with grow's denser navigation and footer pattern.",
     changes: [
       "flattened sidebar navigation so each menu item renders on a single line.",
       "reworked the sidebar footer to show theme toggle, changelog version, and avatar access.",

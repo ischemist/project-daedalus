@@ -1,4 +1,4 @@
-name: code quality
+name: Code Quality
 
 on:
   push:
@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  checks:
+  code-quality:
+    name: Lint, Format, Type Check & Build
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/daedalus?schema=public
@@ -36,11 +37,14 @@ jobs:
       - name: generate prisma client
         run: pnpm db:generate
 
+      - name: format check
+        run: pnpm format:check
+
       - name: lint
         run: pnpm lint
 
-      - name: typecheck
-        run: pnpm typecheck
+      - name: type check
+        run: pnpm check-types
 
       - name: build
         run: pnpm build

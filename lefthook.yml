@@ -1,0 +1,12 @@
+glob_matcher: doublestar
+
+pre-commit:
+  commands:
+    code-quality:
+      glob: "**/*.{js,jsx,ts,tsx,mjs,mts,cjs,cts}"
+      run: pnpm exec oxlint --fix --quiet {staged_files} && pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    format-misc:
+      glob: "**/*.{json,css,scss,md,mdx,yaml,yml}"
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true

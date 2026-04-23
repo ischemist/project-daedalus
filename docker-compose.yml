@@ -12,7 +12,11 @@ services:
     volumes:
       - postgres18_data:/var/lib/postgresql/18/docker
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-daedalus}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-daedalus}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -38,6 +38,8 @@ export async function sendTransactionalEmail({
   })
 
   if (response.error) {
-    throw new Error(response.error.message ?? "failed to send email with resend.")
+    throw new Error(
+      response.error.message ?? "failed to send email with resend."
+    )
   }
 }

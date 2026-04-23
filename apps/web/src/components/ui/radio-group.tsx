@@ -29,10 +29,10 @@ const radioItemVariants = cva(
 // THEME_TOKENS.radios.*.indicator uses fill-* (for SVG); Base UI uses a <span>,
 // so we translate to bg-* equivalents.
 const radioIndicatorColors: Record<RadioVariant, string> = {
-  default: THEME_TOKENS.radios.default.indicator.replace('fill-', 'bg-'),
-  aegean: THEME_TOKENS.radios.aegean.indicator.replace('fill-', 'bg-'),
-  forge: THEME_TOKENS.radios.forge.indicator.replace('fill-', 'bg-'),
-  anvil: THEME_TOKENS.radios.anvil.indicator.replace('fill-', 'bg-'),
+  default: THEME_TOKENS.radios.default.indicator.replace("fill-", "bg-"),
+  aegean: THEME_TOKENS.radios.aegean.indicator.replace("fill-", "bg-"),
+  forge: THEME_TOKENS.radios.forge.indicator.replace("fill-", "bg-"),
+  anvil: THEME_TOKENS.radios.anvil.indicator.replace("fill-", "bg-"),
 }
 
 function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
@@ -63,7 +63,12 @@ function RadioGroupItem({
         data-slot="radio-group-indicator"
         className="flex size-4 items-center justify-center"
       >
-        <span className={cn("absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full", radioIndicatorColors[v])} />
+        <span
+          className={cn(
+            "absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full",
+            radioIndicatorColors[v]
+          )}
+        />
       </RadioPrimitive.Indicator>
     </RadioPrimitive.Root>
   )

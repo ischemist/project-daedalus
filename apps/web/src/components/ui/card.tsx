@@ -18,7 +18,8 @@ const cardVariants = cva(
         destructive: `${THEME_TOKENS.backgrounds.destructive} ${THEME_TOKENS.borders.destructive}`,
       },
       size: {
-        default: "gap-4 py-4 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0",
+        default:
+          "gap-4 py-4 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0",
         sm: "gap-3 py-3 has-data-[slot=card-footer]:pb-0",
       },
     },
@@ -41,7 +42,8 @@ const cardHeaderVariants = cva(
         destructive: THEME_TOKENS.text.destructive,
       },
       size: {
-        default: "px-4 group-data-[size=sm]/card:px-3 group-data-[size=sm]/card:[.border-b]:pb-3",
+        default:
+          "px-4 group-data-[size=sm]/card:px-3 group-data-[size=sm]/card:[.border-b]:pb-3",
         sm: "px-3 [.border-b]:pb-3",
       },
     },

@@ -4,7 +4,10 @@ import { prismaAdapter } from "better-auth/adapters/prisma"
 import { lastLoginMethod, magicLink } from "better-auth/plugins"
 
 import { prisma } from "@/lib/db"
-import { MAGIC_LINK_EXPIRES_IN_SECONDS, sendMagicLinkEmail } from "@/lib/auth/magic-link-email"
+import {
+  MAGIC_LINK_EXPIRES_IN_SECONDS,
+  sendMagicLinkEmail,
+} from "@/lib/auth/magic-link-email"
 
 const socialProviders = {
   ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
@@ -58,7 +61,8 @@ export const auth = betterAuth({
     magicLink({
       expiresIn: MAGIC_LINK_EXPIRES_IN_SECONDS,
       storeToken: "hashed",
-      sendMagicLink: async ({ email, url }) => sendMagicLinkEmail({ email, url }),
+      sendMagicLink: async ({ email, url }) =>
+        sendMagicLinkEmail({ email, url }),
     }),
     lastLoginMethod({
       customResolveMethod: (ctx) => {

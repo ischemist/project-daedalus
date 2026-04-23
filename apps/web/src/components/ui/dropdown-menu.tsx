@@ -49,7 +49,10 @@ function DropdownMenuContent({
           className={cn(
             "z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border-[1.5px] p-1 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
             themed
-              ? cn(THEME_TOKENS.backgrounds[variant], THEME_TOKENS.borders[variant])
+              ? cn(
+                  THEME_TOKENS.backgrounds[variant],
+                  THEME_TOKENS.borders[variant]
+                )
               : "border-border/70 bg-popover text-popover-foreground",
             className
           )}
@@ -129,7 +132,10 @@ function DropdownMenuSubTrigger({
 }) {
   const themed = variant && variant !== "default"
   const themedClasses = themed
-    ? THEME_TOKENS.subTrigger[variant].replace(/data-\[state=open\]/g, "data-popup-open")
+    ? THEME_TOKENS.subTrigger[variant].replace(
+        /data-\[state=open\]/g,
+        "data-popup-open"
+      )
     : "focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground"
   return (
     <MenuPrimitive.SubmenuTrigger
@@ -209,8 +215,7 @@ function DropdownMenuCheckboxItem({
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon
-          />
+          <CheckIcon />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
@@ -256,8 +261,7 @@ function DropdownMenuRadioItem({
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <CheckIcon
-          />
+          <CheckIcon />
         </MenuPrimitive.RadioItemIndicator>
       </span>
       {children}

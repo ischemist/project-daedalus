@@ -1,0 +1,67 @@
+name-template: "v$RESOLVED_VERSION ⛰️"
+tag-template: "v$RESOLVED_VERSION"
+include-pre-releases: true
+prerelease: true
+
+autolabeler:
+  - label: "dependencies"
+    branch:
+      - '/^dependabot\//'
+      - '/^renovate\//'
+    title:
+      - '/^build\(deps\)/'
+
+categories:
+  - title: "🚨 BREAKING CHANGES"
+    labels:
+      - "breaking-change"
+  - title: "🛡️ Security Fixes"
+    labels:
+      - "type/security"
+  - title: "✨ New Features"
+    labels:
+      - "type/feature"
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "type/bug"
+  - title: "🚀 Performance Improvements"
+    labels:
+      - "scope/performance"
+  - title: "📚 Documentation"
+    labels:
+      - "type/docs"
+  - title: "🛠️ Maintenance & Internal Improvements"
+    labels:
+      - "type/refactor"
+      - "type/chore"
+      - "scope/ci-cd"
+      - "scope/testing"
+  - title: "⬆️ Dependency Updates"
+    labels:
+      - "dependencies"
+
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - "breaking-change"
+  minor:
+    labels:
+      - "type/feature"
+  patch:
+    labels:
+      - "type/bug"
+      - "type/chore"
+      - "type/docs"
+      - "type/refactor"
+      - "type/security"
+      - "scope/performance"
+      - "dependencies"
+  default: patch
+
+template: |
+  ## Changes
+
+  $CHANGES

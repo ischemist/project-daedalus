@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "plugins": ["eslint", "typescript", "react", "nextjs", "promise"],
+  "settings": {
+    "next": {
+      "rootDir": "apps/web"
+    }
+  },
+  "ignorePatterns": [
+    "**/*.d.ts",
+    ".next/**",
+    "build/**",
+    "coverage/**",
+    "dist/**",
+    "out/**",
+    "apps/web/next-env.d.ts",
+    "apps/web/src/generated/prisma/**"
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error"
+  }
+}

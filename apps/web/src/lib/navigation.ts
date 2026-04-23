@@ -29,7 +29,9 @@ function prettifySegment(segment: string) {
 export function getBreadcrumbItems(segments: string[]) {
   return segments.map((segment, index) => {
     const href = `/${segments.slice(0, index + 1).join("/")}`
-    const title = routeTitleOverrides.get(segments.slice(0, index + 1).join("/")) ?? prettifySegment(segment)
+    const title =
+      routeTitleOverrides.get(segments.slice(0, index + 1).join("/")) ??
+      prettifySegment(segment)
 
     return {
       href,

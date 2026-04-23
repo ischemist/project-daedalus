@@ -5,7 +5,18 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { appNavItems } from "@/lib/navigation"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar"
 
 import { ModeToggle } from "./mode-toggle"
 import { NavUser } from "./nav-user"
@@ -27,14 +38,15 @@ export function AppSidebar({ user, children, footerMeta }: AppSidebarProps) {
     <Sidebar variant="inset" collapsible="icon">
       <SidebarContent>
         <SidebarGroup className="pt-3">
-          <SidebarGroupLabel className="px-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+          <SidebarGroupLabel className="px-2 text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
             daedalus
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {appNavItems.map((item) => {
                 const Icon = item.icon
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const isActive =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
 
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -79,13 +91,15 @@ export function SidebarFooterMeta({
   return (
     <Link
       href="/changelog"
-      className="flex flex-col items-center leading-tight text-muted-foreground transition-colors hover:text-foreground group-data-[collapsible=icon]:hidden"
+      className="flex flex-col items-center leading-tight text-muted-foreground transition-colors group-data-[collapsible=icon]:hidden hover:text-foreground"
       aria-label="view changelog"
     >
       <span className="text-xs font-medium">v{version}</span>
       {versionDate ? (
         <span className="text-[10px] text-muted-foreground/70">
-          {formatDistanceToNow(new Date(versionDate), { addSuffix: true })}
+          {formatDistanceToNow(new Date(versionDate), {
+            addSuffix: true,
+          })}
         </span>
       ) : null}
     </Link>
