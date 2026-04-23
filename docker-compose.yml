@@ -6,11 +6,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-daedalus}
-      PGDATA: /var/lib/postgresql/18/docker
+      PGDATA: /var/lib/postgresql/data
     ports:
       - "5433:5432"
     volumes:
-      - postgres18_data:/var/lib/postgresql/18/docker
+      - postgres18_pgdata:/var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -44,4 +44,4 @@ services:
       sh -c "pnpm db:deploy && pnpm --filter @ischemist/web start"
 
 volumes:
-  postgres18_data:
+  postgres18_pgdata:

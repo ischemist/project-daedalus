@@ -8,6 +8,9 @@ const configDir = dirname(fileURLToPath(import.meta.url))
 loadEnv({ path: resolve(configDir, "../../.env") })
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+const nextConfig = {
+  allowedDevOrigins: ["100.120.112.3"],
+  transpilePackages: ["@ischemist/routes", "@ischemist/route-viewer"],
+}
 
 export default nextConfig

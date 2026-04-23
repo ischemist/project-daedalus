@@ -1,4 +1,8 @@
-import { LayoutDashboardIcon, type LucideIcon } from "lucide-react"
+import {
+  GitCompareArrowsIcon,
+  LayoutDashboardIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 export type AppNavItem = {
   href: string
@@ -11,6 +15,11 @@ export const appNavItems: AppNavItem[] = [
     href: "/dashboard",
     title: "dashboard",
     icon: LayoutDashboardIcon,
+  },
+  {
+    href: "/routes",
+    title: "routes",
+    icon: GitCompareArrowsIcon,
   },
 ]
 

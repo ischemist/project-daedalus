@@ -1,0 +1,131 @@
+"use client"
+
+import { useEffect } from "react"
+import {
+  Background,
+  Controls,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
+} from "@xyflow/react"
+import type { Edge, Node } from "@xyflow/react"
+import type { RouteGraphNode } from "@ischemist/routes"
+
+import { MoleculeNode } from "./molecule-node.js"
+
+import "@xyflow/react/dist/style.css"
+
+const nodeTypes = {
+  molecule: MoleculeNode,
+}
+
+const flowPanelStyles = `
+  .ischemist-route-viewer-controls.react-flow__controls {
+    background: var(--popover, var(--background, #ffffff));
+    border: 1px solid rgb(148 163 184 / 0.28);
+    box-shadow: 0 8px 22px rgb(15 23 42 / 0.12);
+  }
+
+  .ischemist-route-viewer-controls .react-flow__controls-button {
+    background: var(--popover, var(--background, #ffffff));
+    border-bottom: 1px solid rgb(148 163 184 / 0.24);
+    color: var(--popover-foreground, var(--foreground, #111827));
+    fill: currentColor;
+  }
+
+  .ischemist-route-viewer-controls .react-flow__controls-button:hover {
+    background: color-mix(in oklch, var(--foreground, #111827) 7%, transparent);
+  }
+
+  .ischemist-route-viewer-controls .react-flow__controls-button svg {
+    color: inherit;
+    fill: currentColor;
+  }
+
+  .ischemist-route-viewer-controls .react-flow__controls-button:last-child {
+    border-bottom: 0;
+  }
+
+  .react-flow__attribution {
+    background: var(--popover, var(--background, #ffffff));
+    color: color-mix(in oklch, var(--foreground, #111827) 58%, transparent);
+    border: 1px solid rgb(148 163 184 / 0.22);
+    border-radius: 6px 0 0 0;
+    font-size: 10px;
+  }
+
+  .react-flow__attribution a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .react-flow__attribution a:hover {
+    color: var(--foreground, #111827);
+  }
+`
+
+export type FlowPanelProps = {
+  nodes: Node<RouteGraphNode>[]
+  edges: Edge[]
+  title?: string
+}
+
+export function FlowPanel({
+  nodes: initialNodes,
+  edges: initialEdges,
+  title,
+}: FlowPanelProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+
+  useEffect(() => {
+    setNodes(initialNodes)
+    setEdges(initialEdges)
+  }, [initialEdges, initialNodes, setEdges, setNodes])
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 360,
+      }}
+    >
+      {title ? (
+        <div
+          style={{
+            background: "rgb(148 163 184 / 0.1)",
+            borderBottom: "1px solid rgb(148 163 184 / 0.24)",
+            fontSize: 13,
+            fontWeight: 650,
+            padding: "8px 12px",
+          }}
+        >
+          {title}
+        </div>
+      ) : null}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2, minZoom: 0.1, maxZoom: 4 }}
+          nodesDraggable
+          nodesConnectable={false}
+          elementsSelectable={false}
+        >
+          <style>{flowPanelStyles}</style>
+          <Background color="#cbd5e1" gap={16} />
+          <Controls
+            className="ischemist-route-viewer-controls"
+            showInteractive={false}
+          />
+        </ReactFlow>
+      </div>
+    </div>
+  )
+}
