@@ -1,0 +1,46 @@
+name: code quality
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/daedalus?schema=public
+      BETTER_AUTH_SECRET: ci-better-auth-secret-01234567890123456789
+      BETTER_AUTH_URL: http://localhost:3000
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: generate prisma client
+        run: pnpm db:generate
+
+      - name: lint
+        run: pnpm lint
+
+      - name: typecheck
+        run: pnpm typecheck
+
+      - name: build
+        run: pnpm build
