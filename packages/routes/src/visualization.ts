@@ -53,6 +53,33 @@ type InternalOverlayLayoutNode = InternalLayoutNode & {
   children: InternalOverlayLayoutNode[]
 }
 
+type RouteTopology = {
+  inchikeys: Set<string>
+  edges: Set<string>
+}
+
+function routeEdgeKey(parentInchikey: string, childInchikey: string): string {
+  return `${parentInchikey}->${childInchikey}`
+}
+
+function buildRouteTopology(
+  node: RouteVisualizationNode,
+  topology: RouteTopology = { inchikeys: new Set(), edges: new Set() },
+  parentInchikey?: string
+): RouteTopology {
+  topology.inchikeys.add(node.inchikey)
+
+  if (parentInchikey) {
+    topology.edges.add(routeEdgeKey(parentInchikey, node.inchikey))
+  }
+
+  for (const child of node.children ?? []) {
+    buildRouteTopology(child, topology, node.inchikey)
+  }
+
+  return topology
+}
+
 function buildLayoutTree(
   node: RouteVisualizationNode,
   idPrefix: string
@@ -398,21 +425,49 @@ export function getAllRouteInchiKeysSet(
 
 export function buildSideBySideGraph(
   route: RouteVisualizationNode,
-  acceptableInchiKeys: Set<string>,
+  acceptableRouteOrInchiKeys: RouteVisualizationNode | Set<string>,
   isAcceptableRoute: boolean,
   idPrefix: string,
   inStockInchiKeys?: Set<string>,
-  buyableMetadataMap?: Map<string, BuyableMetadata>
+  buyableMetadataMap?: Map<string, BuyableMetadata>,
+  comparedRoute?: RouteVisualizationNode
 ): RouteGraph {
   const layout = layoutTree(route, idPrefix)
   const leafNodeIds = buildLeafNodeSet(layout.edges, layout.nodes)
+  const nodeById = new Map(layout.nodes.map((node) => [node.id, node]))
+  const parentByNodeId = new Map(
+    layout.edges.map((edge) => [edge.target, edge.source])
+  )
+  const acceptableTopology =
+    acceptableRouteOrInchiKeys instanceof Set
+      ? { inchikeys: acceptableRouteOrInchiKeys, edges: new Set<string>() }
+      : buildRouteTopology(acceptableRouteOrInchiKeys)
+  const comparedTopology = comparedRoute
+    ? buildRouteTopology(comparedRoute)
+    : undefined
 
   const nodes = layout.nodes.map((node) => {
-    const status: NodeStatus = isAcceptableRoute
-      ? "match"
-      : acceptableInchiKeys.has(node.inchikey)
-        ? "match"
-        : "extension"
+    const parentId = parentByNodeId.get(node.id)
+    const parent = parentId ? nodeById.get(parentId) : undefined
+    const edgeKey = parent ? routeEdgeKey(parent.inchikey, node.inchikey) : null
+    let status: NodeStatus
+
+    if (isAcceptableRoute) {
+      status =
+        comparedTopology &&
+        (!comparedTopology.inchikeys.has(node.inchikey) ||
+          (edgeKey != null && !comparedTopology.edges.has(edgeKey)))
+          ? "ghost"
+          : "match"
+    } else {
+      status =
+        !acceptableTopology.inchikeys.has(node.inchikey) ||
+        (edgeKey != null &&
+          acceptableTopology.edges.size > 0 &&
+          !acceptableTopology.edges.has(edgeKey))
+          ? "extension"
+          : "match"
+    }
 
     return createGraphNode(
       node,
@@ -428,9 +483,7 @@ export function buildSideBySideGraph(
 
 function mergeTreesForDiff(
   acceptableNode: RouteVisualizationNode | null,
-  predNode: RouteVisualizationNode | null,
-  acceptableInchiKeys: Set<string>,
-  predInchiKeys: Set<string>
+  predNode: RouteVisualizationNode | null
 ): MergedRouteNode | null {
   if (!acceptableNode && !predNode) {
     return null
@@ -443,11 +496,7 @@ function mergeTreesForDiff(
   }
 
   const status: NodeStatus =
-    predInchiKeys.has(inchikey) && acceptableInchiKeys.has(inchikey)
-      ? "match"
-      : predInchiKeys.has(inchikey)
-        ? "extension"
-        : "ghost"
+    acceptableNode && predNode ? "match" : predNode ? "extension" : "ghost"
 
   const acceptableChildren = acceptableNode?.children ?? []
   const predChildren = predNode?.children ?? []
@@ -457,12 +506,7 @@ function mergeTreesForDiff(
     const acceptableMatch = acceptableChildren.find(
       (candidate) => candidate.inchikey === child.inchikey
     )
-    const merged = mergeTreesForDiff(
-      acceptableMatch ?? null,
-      child,
-      acceptableInchiKeys,
-      predInchiKeys
-    )
+    const merged = mergeTreesForDiff(acceptableMatch ?? null, child)
     if (merged) {
       mergedChildrenMap.set(child.inchikey, merged)
     }
@@ -470,12 +514,7 @@ function mergeTreesForDiff(
 
   for (const child of acceptableChildren) {
     if (!mergedChildrenMap.has(child.inchikey)) {
-      const merged = mergeTreesForDiff(
-        child,
-        null,
-        acceptableInchiKeys,
-        predInchiKeys
-      )
+      const merged = mergeTreesForDiff(child, null)
       if (merged) {
         mergedChildrenMap.set(child.inchikey, merged)
       }
@@ -590,14 +629,7 @@ export function buildDiffOverlayGraph(
   inStockInchiKeys?: Set<string>,
   buyableMetadataMap?: Map<string, BuyableMetadata>
 ): RouteGraph {
-  const acceptableInchiKeys = collectInchiKeys(acceptableRoute)
-  const predInchiKeys = collectInchiKeys(predRoute)
-  const mergedTree = mergeTreesForDiff(
-    acceptableRoute,
-    predRoute,
-    acceptableInchiKeys,
-    predInchiKeys
-  )
+  const mergedTree = mergeTreesForDiff(acceptableRoute, predRoute)
 
   if (!mergedTree) {
     return { nodes: [], edges: [] }
@@ -643,9 +675,7 @@ export function buildPredictionSideBySideGraph(
 
 function mergeTreesForPredDiff(
   pred1Node: RouteVisualizationNode | null,
-  pred2Node: RouteVisualizationNode | null,
-  pred1InchiKeys: Set<string>,
-  pred2InchiKeys: Set<string>
+  pred2Node: RouteVisualizationNode | null
 ): MergedRouteNode | null {
   if (!pred1Node && !pred2Node) {
     return null
@@ -658,9 +688,9 @@ function mergeTreesForPredDiff(
   }
 
   const status: NodeStatus =
-    pred1InchiKeys.has(inchikey) && pred2InchiKeys.has(inchikey)
+    pred1Node && pred2Node
       ? "pred-shared"
-      : pred1InchiKeys.has(inchikey)
+      : pred1Node
         ? "pred-1-only"
         : "pred-2-only"
 
@@ -672,12 +702,7 @@ function mergeTreesForPredDiff(
     const pred2Match = pred2Children.find(
       (candidate) => candidate.inchikey === child.inchikey
     )
-    const merged = mergeTreesForPredDiff(
-      child,
-      pred2Match ?? null,
-      pred1InchiKeys,
-      pred2InchiKeys
-    )
+    const merged = mergeTreesForPredDiff(child, pred2Match ?? null)
     if (merged) {
       mergedChildrenMap.set(child.inchikey, merged)
     }
@@ -685,12 +710,7 @@ function mergeTreesForPredDiff(
 
   for (const child of pred2Children) {
     if (!mergedChildrenMap.has(child.inchikey)) {
-      const merged = mergeTreesForPredDiff(
-        null,
-        child,
-        pred1InchiKeys,
-        pred2InchiKeys
-      )
+      const merged = mergeTreesForPredDiff(null, child)
       if (merged) {
         mergedChildrenMap.set(child.inchikey, merged)
       }
@@ -711,14 +731,7 @@ export function buildPredictionDiffOverlayGraph(
   inStockInchiKeys?: Set<string>,
   buyableMetadataMap?: Map<string, BuyableMetadata>
 ): RouteGraph {
-  const pred1InchiKeys = collectInchiKeys(pred1Route)
-  const pred2InchiKeys = collectInchiKeys(pred2Route)
-  const mergedTree = mergeTreesForPredDiff(
-    pred1Route,
-    pred2Route,
-    pred1InchiKeys,
-    pred2InchiKeys
-  )
+  const mergedTree = mergeTreesForPredDiff(pred1Route, pred2Route)
 
   if (!mergedTree) {
     return { nodes: [], edges: [] }

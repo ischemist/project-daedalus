@@ -11,7 +11,6 @@ import type {
 import {
   buildDiffOverlayGraph,
   buildSideBySideGraph,
-  collectInchiKeys,
 } from "@ischemist/routes/visualization"
 
 import { FlowPanel } from "./flow-panel.js"
@@ -49,20 +48,20 @@ export function RouteComparison({
       }
     }
 
-    const referenceInchiKeys = collectInchiKeys(referenceRoute)
     return {
       diff: null,
       reference: buildSideBySideGraph(
         referenceRoute,
-        referenceInchiKeys,
+        referenceRoute,
         true,
         "reference_",
         inStockInchiKeys,
-        buyableMetadataMap
+        buyableMetadataMap,
+        comparedRoute
       ),
       compared: buildSideBySideGraph(
         comparedRoute,
-        referenceInchiKeys,
+        referenceRoute,
         false,
         "compared_",
         inStockInchiKeys,
