@@ -37,9 +37,9 @@ function StockBadgeLegend({ label }: { label: string }) {
     <span style={{ alignItems: "center", display: "inline-flex", gap: 6 }}>
       <span
         style={{
-          background: "rgb(16 185 129 / 0.14)",
+          background: "rgb(15 118 110 / 0.14)",
           borderRadius: 6,
-          color: "#047857",
+          color: "#0f766e",
           display: "inline-flex",
           fontSize: 12,
           fontWeight: 650,
@@ -89,8 +89,8 @@ export function RouteLegend({
       ) : null}
       {isComparisonMode && !isPredictionComparison ? (
         <>
-          <LegendSwatch color="#10b981" label="match" />
-          <LegendSwatch color="#f59e0b" label="extension" />
+          <LegendSwatch color="#0f766e" label="match" />
+          <LegendSwatch color="#b45309" label="extension" />
           {viewMode === "diff-overlay" ? (
             <LegendSwatch color="#9ca3af" dashed label="missing" />
           ) : null}

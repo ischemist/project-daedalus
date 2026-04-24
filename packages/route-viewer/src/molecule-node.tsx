@@ -9,10 +9,10 @@ import type { RouteGraphNode, VendorSource } from "@ischemist/routes"
 import { MoleculeSvg } from "./molecule-svg.js"
 
 const statusStyles: Record<string, React.CSSProperties> = {
-  "in-stock": { borderColor: "#10b981" },
+  "in-stock": { borderColor: "#0f766e" },
   default: { borderColor: "var(--ischemist-route-node-border-default)" },
-  match: { borderColor: "#10b981" },
-  extension: { borderColor: "#f59e0b" },
+  match: { borderColor: "#0f766e" },
+  extension: { borderColor: "#b45309" },
   ghost: {
     borderColor: "var(--ischemist-route-node-border-ghost)",
     borderStyle: "dashed",
