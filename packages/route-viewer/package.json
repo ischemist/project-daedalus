@@ -1,6 +1,6 @@
 {
   "name": "@ischemist/route-viewer",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "react route visualization components for ischemist route projections",
   "type": "module",
   "files": [
@@ -22,7 +22,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@ischemist/routes": "workspace:^",
+    "@ischemist/routes": "^0.0.2",
     "@xyflow/react": "^12.9.3",
     "lucide-react": "^1.8.0",
     "smiles-drawer": "^2.1.7"

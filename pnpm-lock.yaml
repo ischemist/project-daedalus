@@ -160,8 +160,8 @@ importers:
   packages/route-viewer:
     dependencies:
       '@ischemist/routes':
-        specifier: workspace:^
-        version: link:../routes
+        specifier: ^0.0.2
+        version: 0.0.2
       '@xyflow/react':
         specifier: ^12.9.3
         version: 12.10.2(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -826,6 +826,9 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
+
+  '@ischemist/routes@0.0.2':
+    resolution: {integrity: sha512-ml/jFGkIF8o3uFerQIIbXtfo6S25aF9f8y83xAtb+AXgny69AqyaaFaEBwtqAytiUyPghMDlrUbe9QN5dSo+/w==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -4261,6 +4264,8 @@ snapshots:
   '@inquirer/type@4.0.5(@types/node@25.6.0)':
     optionalDependencies:
       '@types/node': 25.6.0
+
+  '@ischemist/routes@0.0.2': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
