@@ -10,10 +10,14 @@ import { MoleculeSvg } from "./molecule-svg.js"
 
 const statusStyles: Record<string, React.CSSProperties> = {
   "in-stock": { borderColor: "#10b981" },
-  default: { borderColor: "#d1d5db" },
+  default: { borderColor: "var(--ischemist-route-node-border-default)" },
   match: { borderColor: "#10b981" },
   extension: { borderColor: "#f59e0b" },
-  ghost: { borderColor: "#9ca3af", borderStyle: "dashed", opacity: 0.62 },
+  ghost: {
+    borderColor: "var(--ischemist-route-node-border-ghost)",
+    borderStyle: "dashed",
+    opacity: 0.62,
+  },
   "pred-shared": { borderColor: "#64748b", borderWidth: 2.5 },
   "pred-1-only": { borderColor: "#b45309" },
   "pred-2-only": { borderColor: "#b45309", borderStyle: "dashed" },
@@ -118,14 +122,15 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
 
   return (
     <div
+      className="ischemist-route-viewer-node"
       style={{
         ...statusStyle,
-        background: "var(--background, #ffffff)",
+        background: "var(--ischemist-route-node-bg)",
         borderRadius: 8,
         borderStyle:
           statusStyle?.borderStyle ?? (status === "ghost" ? "dashed" : "solid"),
         borderWidth: statusStyle?.borderWidth ?? 2,
-        boxShadow: "0 1px 2px rgb(15 23 42 / 0.08)",
+        boxShadow: "var(--ischemist-route-node-shadow)",
         color: "var(--foreground, #111827)",
         position: "relative",
         width: 178,

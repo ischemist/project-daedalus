@@ -20,6 +20,20 @@ const nodeTypes = {
 }
 
 const flowPanelStyles = `
+  .ischemist-route-viewer-node {
+    --ischemist-route-node-bg: var(--background, #ffffff);
+    --ischemist-route-node-border-default: rgb(203 213 225 / 0.72);
+    --ischemist-route-node-border-ghost: rgb(148 163 184 / 0.74);
+    --ischemist-route-node-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
+  }
+
+  .dark .ischemist-route-viewer-node {
+    --ischemist-route-node-bg: color-mix(in oklch, var(--background, #09090b) 94%, white);
+    --ischemist-route-node-border-default: rgb(148 163 184 / 0.35);
+    --ischemist-route-node-border-ghost: rgb(148 163 184 / 0.45);
+    --ischemist-route-node-shadow: 0 1px 2px rgb(0 0 0 / 0.28);
+  }
+
   .ischemist-route-viewer-controls.react-flow__controls {
     background: var(--popover, var(--background, #ffffff));
     border: 1px solid rgb(148 163 184 / 0.28);
