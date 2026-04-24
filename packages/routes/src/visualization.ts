@@ -220,12 +220,7 @@ export function buildRouteGraph(
   const layout = layoutTree(route, idPrefix)
   return {
     nodes: layout.nodes.map((node) =>
-      createGraphNode(
-        node,
-        inStockInchiKeys.has(node.inchikey) ? "in-stock" : "default",
-        inStockInchiKeys,
-        buyableMetadataMap
-      )
+      createGraphNode(node, "default", inStockInchiKeys, buyableMetadataMap)
     ),
     edges: toFlowEdges(layout.edges, idPrefix),
   }

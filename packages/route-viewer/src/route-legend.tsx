@@ -32,6 +32,28 @@ function LegendSwatch({
   )
 }
 
+function StockBadgeLegend({ label }: { label: string }) {
+  return (
+    <span style={{ alignItems: "center", display: "inline-flex", gap: 6 }}>
+      <span
+        style={{
+          background: "rgb(16 185 129 / 0.14)",
+          borderRadius: 6,
+          color: "#047857",
+          display: "inline-flex",
+          fontSize: 12,
+          fontWeight: 650,
+          lineHeight: 1,
+          padding: "3px 6px",
+        }}
+      >
+        in stock
+      </span>
+      <span>{label}</span>
+    </span>
+  )
+}
+
 export function RouteLegend({
   viewMode = "prediction-only",
   isPredictionComparison = false,
@@ -63,10 +85,7 @@ export function RouteLegend({
         </>
       ) : null}
       {!isComparisonMode && !isOverlay ? (
-        <>
-          <LegendSwatch color="#10b981" label="in stock" />
-          <LegendSwatch color="#d1d5db" label="not in stock" />
-        </>
+        <StockBadgeLegend label="available molecule" />
       ) : null}
       {isComparisonMode && !isPredictionComparison ? (
         <>
