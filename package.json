@@ -4,9 +4,10 @@
   "packageManager": "pnpm@10.11.0",
   "scripts": {
     "dev": "pnpm --filter @ischemist/web dev",
-    "build": "pnpm --filter @ischemist/web build",
-    "lint": "oxlint --type-aware --quiet apps/web",
-    "check-types": "tsgo --project apps/web/tsconfig.json --noEmit",
+    "build": "pnpm packages:build && pnpm --filter @ischemist/web build",
+    "packages:build": "pnpm --filter @ischemist/routes build && pnpm --filter @ischemist/route-viewer build",
+    "lint": "pnpm packages:build && oxlint --type-aware --quiet apps/web packages",
+    "check-types": "pnpm packages:build && pnpm --filter @ischemist/routes check-types && pnpm --filter @ischemist/route-viewer check-types && tsgo --project apps/web/tsconfig.json --noEmit",
     "typecheck": "pnpm check-types",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
@@ -16,14 +17,18 @@
     "db:generate": "pnpm --filter @ischemist/web prisma:generate",
     "db:migrate": "pnpm --filter @ischemist/web prisma:migrate:dev",
     "db:deploy": "pnpm --filter @ischemist/web prisma:migrate:deploy",
-    "db:studio": "pnpm --filter @ischemist/web prisma:studio"
+    "db:studio": "pnpm --filter @ischemist/web prisma:studio",
+    "routes:load-sample": "pnpm packages:build && pnpm --filter @ischemist/web routes:load-sample"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@typescript/native-preview": "beta",
     "lefthook": "^2.1.6",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
-    "oxlint-tsgolint": "^0.21.1"
+    "oxlint-tsgolint": "^0.21.1",
+    "tsx": "^4.20.6",
+    "typescript": "^6.0.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
