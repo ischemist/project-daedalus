@@ -7,9 +7,14 @@ const configDir = dirname(fileURLToPath(import.meta.url))
 
 loadEnv({ path: resolve(configDir, "../../.env") })
 
+const allowedDevOrigins =
+  process.env.ALLOWED_DEV_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? []
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ["100.120.112.3"],
+  allowedDevOrigins,
   transpilePackages: ["@ischemist/routes", "@ischemist/route-viewer"],
 }
 

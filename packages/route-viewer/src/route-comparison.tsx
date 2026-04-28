@@ -52,7 +52,7 @@ export function RouteComparison({
       diff: null,
       reference: buildSideBySideGraph(
         referenceRoute,
-        referenceRoute,
+        comparedRoute,
         true,
         "reference_",
         inStockInchiKeys,

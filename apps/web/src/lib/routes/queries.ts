@@ -35,6 +35,24 @@ export type RouteComparisonPageData = {
   comparedTree: RouteVisualizationNode | null
 }
 
+type RouteTreeRecord = {
+  id: string
+  rootNodeId: string | null
+  nodes: Array<{
+    id: string
+    molecule: {
+      inchikey: string
+      canonicalSmiles: string | null
+    }
+  }>
+  steps: Array<{
+    productNodeId: string
+    inputs: Array<{
+      routeNodeId: string
+    }>
+  }>
+}
+
 function toSummary(route: {
   id: string
   signature: string
@@ -120,9 +138,63 @@ export async function listRouteTargetGroups(): Promise<RouteTargetGroup[]> {
 export async function getRouteVisualizationTree(
   routeId: string
 ): Promise<RouteVisualizationNode | null> {
-  const route = await prisma.route.findUnique({
-    where: { id: routeId },
+  return (await getRouteVisualizationTrees([routeId])).get(routeId) ?? null
+}
+
+function buildRouteVisualizationTree(
+  route: RouteTreeRecord
+): RouteVisualizationNode | null {
+  if (!route.rootNodeId) {
+    return null
+  }
+
+  const nodes = new Map(
+    route.nodes.map((node) => [
+      node.id,
+      {
+        smiles: node.molecule.canonicalSmiles ?? node.molecule.inchikey,
+        inchikey: node.molecule.inchikey,
+      },
+    ])
+  )
+  const childrenByProductNode = new Map<string, string[]>()
+
+  for (const step of route.steps) {
+    childrenByProductNode.set(
+      step.productNodeId,
+      step.inputs.map((input) => input.routeNodeId)
+    )
+  }
+
+  function buildNode(nodeId: string): RouteVisualizationNode {
+    const node = nodes.get(nodeId)
+    if (!node) {
+      throw new Error(`route ${route.id} references missing node ${nodeId}`)
+    }
+
+    const children = childrenByProductNode.get(nodeId)?.map(buildNode)
+    return {
+      smiles: node.smiles,
+      inchikey: node.inchikey,
+      ...(children && children.length > 0 ? { children } : {}),
+    }
+  }
+
+  return buildNode(route.rootNodeId)
+}
+
+export async function getRouteVisualizationTrees(
+  routeIds: string[]
+): Promise<Map<string, RouteVisualizationNode>> {
+  const uniqueRouteIds = Array.from(new Set(routeIds))
+  if (uniqueRouteIds.length === 0) {
+    return new Map()
+  }
+
+  const routes = await prisma.route.findMany({
+    where: { id: { in: uniqueRouteIds } },
     select: {
+      id: true,
       rootNodeId: true,
       nodes: {
         select: {
@@ -149,43 +221,15 @@ export async function getRouteVisualizationTree(
     },
   })
 
-  if (!route?.rootNodeId) {
-    return null
-  }
-
-  const nodes = new Map(
-    route.nodes.map((node) => [
-      node.id,
-      {
-        smiles: node.molecule.canonicalSmiles ?? node.molecule.inchikey,
-        inchikey: node.molecule.inchikey,
-      },
-    ])
-  )
-  const childrenByProductNode = new Map<string, string[]>()
-
-  for (const step of route.steps) {
-    childrenByProductNode.set(
-      step.productNodeId,
-      step.inputs.map((input) => input.routeNodeId)
-    )
-  }
-
-  function buildNode(nodeId: string): RouteVisualizationNode {
-    const node = nodes.get(nodeId)
-    if (!node) {
-      throw new Error(`route ${routeId} references missing node ${nodeId}`)
-    }
-
-    const children = childrenByProductNode.get(nodeId)?.map(buildNode)
-    return {
-      smiles: node.smiles,
-      inchikey: node.inchikey,
-      ...(children && children.length > 0 ? { children } : {}),
+  const trees = new Map<string, RouteVisualizationNode>()
+  for (const route of routes) {
+    const tree = buildRouteVisualizationTree(route)
+    if (tree) {
+      trees.set(route.id, tree)
     }
   }
 
-  return buildNode(route.rootNodeId)
+  return trees
 }
 
 export async function getRouteComparisonPageData({
@@ -216,27 +260,26 @@ export async function getRouteComparisonPageData({
     selectedCompared = fallbackGroup?.routes[1] ?? fallbackGroup?.routes[0]
   }
 
-  const [referenceTree, comparedTree] = await Promise.all([
-    selectedReference ? getRouteVisualizationTree(selectedReference.id) : null,
-    selectedCompared ? getRouteVisualizationTree(selectedCompared.id) : null,
-  ])
   const selectedGroup = groups.find(
     (group) => group.rootMoleculeId === selectedReference?.rootMoleculeId
   )
+  const routeIds = [
+    ...(selectedReference ? [selectedReference.id] : []),
+    ...(selectedCompared ? [selectedCompared.id] : []),
+    ...(selectedGroup?.routes.map((route) => route.id) ?? []),
+  ]
+  const treesByRouteId = await getRouteVisualizationTrees(routeIds)
+  const referenceTree = selectedReference
+    ? (treesByRouteId.get(selectedReference.id) ?? null)
+    : null
+  const comparedTree = selectedCompared
+    ? (treesByRouteId.get(selectedCompared.id) ?? null)
+    : null
   const selectedGroupTrees = selectedGroup
-    ? (
-        await Promise.all(
-          selectedGroup.routes.map(async (route) => {
-            const tree = await getRouteVisualizationTree(route.id)
-            return tree ? { route, tree } : null
-          })
-        )
-      ).filter(
-        (
-          entry
-        ): entry is { route: RouteSummary; tree: RouteVisualizationNode } =>
-          entry !== null
-      )
+    ? selectedGroup.routes.flatMap((route) => {
+        const tree = treesByRouteId.get(route.id)
+        return tree ? [{ route, tree }] : []
+      })
     : []
 
   return {

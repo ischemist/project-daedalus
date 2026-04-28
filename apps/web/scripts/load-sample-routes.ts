@@ -12,8 +12,7 @@ type Options = {
   maxRoutesPerTarget: number
 }
 
-const defaultFile =
-  "/Users/morgunov/Developer/ischemist/synthesis-planning/project-procrustes/data/retrocast/3-processed/mkt-cnv-160/aizynthfinder-mcts/routes.json.gz"
+const defaultFile = process.env.SAMPLE_ROUTES_FILE ?? ""
 
 function parsePositiveInteger(value: string, label: string): number {
   const parsed = Number.parseInt(value, 10)
@@ -65,6 +64,12 @@ function parseOptions(argv: string[]): Options {
 
 async function main() {
   const options = parseOptions(process.argv.slice(2))
+  if (!options.file) {
+    throw new Error(
+      "missing routes file: pass --file=/path/to/routes.json.gz or set SAMPLE_ROUTES_FILE"
+    )
+  }
+
   const [
     { loadRetrocastRoutesGzip },
     { projectRetrocastRoute },

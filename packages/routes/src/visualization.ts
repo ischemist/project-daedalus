@@ -84,7 +84,7 @@ function buildLayoutTree(
   node: RouteVisualizationNode,
   idPrefix: string
 ): InternalLayoutNode {
-  const nodeId = `${idPrefix}${node.smiles}`
+  const nodeId = `${idPrefix}${node.inchikey}`
   return {
     id: nodeId,
     smiles: node.smiles,
@@ -245,9 +245,16 @@ export function buildRouteGraph(
   buyableMetadataMap?: Map<string, BuyableMetadata>
 ): RouteGraph {
   const layout = layoutTree(route, idPrefix)
+  const leafNodeIds = buildLeafNodeSet(layout.edges, layout.nodes)
   return {
     nodes: layout.nodes.map((node) =>
-      createGraphNode(node, "default", inStockInchiKeys, buyableMetadataMap)
+      createGraphNode(
+        node,
+        "default",
+        inStockInchiKeys,
+        buyableMetadataMap,
+        leafNodeIds.has(node.id)
+      )
     ),
     edges: toFlowEdges(layout.edges, idPrefix),
   }
@@ -314,7 +321,7 @@ function buildOverlayLayoutTree(
   idPrefix: string,
   routeTotal: number
 ): InternalOverlayLayoutNode {
-  const nodeId = `${idPrefix}${node.smiles}`
+  const nodeId = `${idPrefix}${node.inchikey}`
   const routeCount = node.routeIndexes.size
 
   return {
@@ -533,14 +540,14 @@ function buildMergedLayoutTree(
   node: MergedRouteNode,
   idPrefix: string
 ): InternalLayoutNodeWithStatus {
-  const nodeId = `${idPrefix}${node.smiles}`
+  const nodeId = `${idPrefix}${node.inchikey}`
   return {
     id: nodeId,
     smiles: node.smiles,
     inchikey: node.inchikey,
     status: node.status,
-    children: node.children.map((child) =>
-      buildMergedLayoutTree(child, `${nodeId}-`)
+    children: node.children.map((child, index) =>
+      buildMergedLayoutTree(child, `${nodeId}-${index}-`)
     ),
   }
 }
