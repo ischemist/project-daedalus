@@ -11,6 +11,9 @@
     "typecheck": "pnpm check-types",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm packages:build && changeset publish",
     "prepare": "lefthook install",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
@@ -21,6 +24,7 @@
     "routes:load-sample": "pnpm packages:build && pnpm --filter @ischemist/web routes:load-sample"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "beta",
     "lefthook": "^2.1.6",
