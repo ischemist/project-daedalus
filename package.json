@@ -12,7 +12,7 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && pnpm install --lockfile-only --link-workspace-packages=true",
     "release": "pnpm packages:build && changeset publish",
     "prepare": "lefthook install",
     "db:up": "docker compose up -d db",
