@@ -39,7 +39,7 @@ jobs:
 
       - name: setup npm trusted publishing support
         run: |
-          npm install --global npm@11
+          pnpm add --global npm@11.5.1
           npm --version
 
       - name: install
