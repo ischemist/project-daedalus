@@ -4,6 +4,7 @@ packages:
 
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
+# pnpm v11 requires explicit allowlisting for packages that install native binaries.
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
