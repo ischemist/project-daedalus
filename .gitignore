@@ -1,6 +1,7 @@
 # internal docs & agent context
 AGENTS.md
 docs/
+.practices/
 
 # dependencies
 node_modules/

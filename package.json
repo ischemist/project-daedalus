@@ -1,7 +1,7 @@
 {
   "name": "project-daedalus",
   "private": true,
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@11.1.0",
   "scripts": {
     "dev": "pnpm --filter @ischemist/web dev",
     "build": "pnpm packages:build && pnpm --filter @ischemist/web build",
@@ -33,13 +33,5 @@
     "oxlint-tsgolint": "^0.21.1",
     "tsx": "^4.20.6",
     "typescript": "^6.0.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma",
-      "sharp"
-    ]
   }
 }
