@@ -1,0 +1,4 @@
+[practices]
+source = "/Users/morgunov/Developer/engineering-practices"
+profile = "dual-language-next-python-service"
+output = ".practices/docs"
