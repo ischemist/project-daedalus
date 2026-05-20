@@ -1,9 +1,6 @@
 import path from "node:path"
 
-import {
-  computeReactionSignature,
-  parseRetrocastRoutes,
-} from "@ischemist/routes"
+import { parseRetrocastRoutes } from "@ischemist/routes"
 import type {
   JsonObject,
   RetrocastRoute,
@@ -21,6 +18,8 @@ import type {
   RetrocastStatisticsFile,
   RetrocastTargetEvaluation,
 } from "./types.js"
+
+export { computeRootReactionSignature as getRootReactionSignature } from "@ischemist/routes"
 
 function assertObject(
   value: unknown,
@@ -184,11 +183,6 @@ export function getFirstMatchingPrediction(
 ): RetrocastRoute | undefined {
   const rank = getAcceptableRank(evaluation)
   return rank == null ? undefined : getPredictionByRank(routes, rank)
-}
-
-export function getRootReactionSignature(route: RetrocastRoute): string | null {
-  const step = route.target.synthesis_step
-  return step ? computeReactionSignature(step, route.target.inchikey) : null
 }
 
 export function getRouteEvaluationByRank(

@@ -45,7 +45,15 @@ export async function findFilesByName(
   rootDir: string,
   fileName: string
 ): Promise<string[]> {
+  return findFilesByNames(rootDir, [fileName])
+}
+
+export async function findFilesByNames(
+  rootDir: string,
+  fileNames: Iterable<string>
+): Promise<string[]> {
   const results: string[] = []
+  const fileNameSet = new Set(fileNames)
 
   async function visit(directory: string): Promise<void> {
     let entries
@@ -55,21 +63,19 @@ export async function findFilesByName(
       return
     }
 
-    await Promise.all(
-      entries.map(async (entry) => {
-        const entryPath = path.join(directory, entry.name)
-        if (entry.isDirectory()) {
-          if (!SKIPPED_DIRECTORIES.has(entry.name)) {
-            await visit(entryPath)
-          }
-          return
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name)
+      if (entry.isDirectory()) {
+        if (!SKIPPED_DIRECTORIES.has(entry.name)) {
+          await visit(entryPath)
         }
+        continue
+      }
 
-        if (entry.isFile() && entry.name === fileName) {
-          results.push(entryPath)
-        }
-      })
-    )
+      if (entry.isFile() && fileNameSet.has(entry.name)) {
+        results.push(entryPath)
+      }
+    }
   }
 
   await visit(rootDir)

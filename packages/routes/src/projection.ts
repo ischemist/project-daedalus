@@ -368,6 +368,9 @@ export function routeProjectionToInspectionTree(
   const stepsByProductNodeRef = new Map(
     projection.steps.map((step) => [step.productNodeRef, step])
   )
+  const reactionByRef = new Map(
+    projection.reactions.map((reaction) => [reaction.ref, reaction])
+  )
   const stepInputsByStepRef = new Map<string, ProjectedRouteStepInput[]>()
 
   for (const input of projection.stepInputs) {
@@ -395,11 +398,7 @@ export function routeProjectionToInspectionTree(
           .sort((a, b) => a.position - b.position)
           .map((input) => visit(input.routeNodeRef))
       : []
-    const reaction = step
-      ? projection.reactions.find(
-          (candidate) => candidate.ref === step.reactionRef
-        )
-      : undefined
+    const reaction = step ? reactionByRef.get(step.reactionRef) : undefined
 
     return {
       ref: node.ref,

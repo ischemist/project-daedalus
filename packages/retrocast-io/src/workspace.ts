@@ -1,6 +1,6 @@
 import path from "node:path"
 
-import { findFilesByName, pathExists } from "./files.js"
+import { findFilesByNames, pathExists } from "./files.js"
 import {
   loadAriadneMetadataFile,
   loadBenchmarkDefinition,
@@ -80,6 +80,20 @@ async function optionalPath(filePath: string): Promise<string | undefined> {
   return (await pathExists(filePath)) ? filePath : undefined
 }
 
+async function optionalJsonArtifactPath(
+  filePathWithoutExtension: string
+): Promise<string | undefined> {
+  return (
+    (await optionalPath(`${filePathWithoutExtension}.json.gz`)) ??
+    (await optionalPath(`${filePathWithoutExtension}.json`))
+  )
+}
+
+function isNamedJsonArtifact(filePath: string, baseName: string): boolean {
+  const fileName = path.basename(filePath)
+  return fileName === `${baseName}.json.gz` || fileName === `${baseName}.json`
+}
+
 function descriptorKey(descriptor: WorkspaceRunDescriptor): string {
   return [
     descriptor.logbookPath,
@@ -119,20 +133,28 @@ async function descriptorFromStatisticsPath(
   }
 
   const runSlug = path.basename(parsed.logbookPath)
-  const processedRoutesPath = path.join(
-    parsed.retrocastExportPath,
-    "3-processed",
-    parsed.benchmarkName,
-    parsed.checkpointLabel,
-    "routes.json.gz"
+  const processedRoutesPath = await optionalJsonArtifactPath(
+    path.join(
+      parsed.retrocastExportPath,
+      "3-processed",
+      parsed.benchmarkName,
+      parsed.checkpointLabel,
+      "routes"
+    )
   )
-  const evaluationPath = path.join(
-    parsed.retrocastExportPath,
-    "4-scored",
-    parsed.benchmarkName,
-    parsed.checkpointLabel,
-    parsed.stockKey,
-    "evaluation.json.gz"
+  if (!processedRoutesPath) {
+    return null
+  }
+
+  const evaluationPath = await optionalJsonArtifactPath(
+    path.join(
+      parsed.retrocastExportPath,
+      "4-scored",
+      parsed.benchmarkName,
+      parsed.checkpointLabel,
+      parsed.stockKey,
+      "evaluation"
+    )
   )
   const resultDirectory = path.dirname(statisticsPath)
 
@@ -148,7 +170,7 @@ async function descriptorFromStatisticsPath(
     stockKey: parsed.stockKey,
     benchmarkName: parsed.benchmarkName,
     processedRoutesPath,
-    evaluationPath: await optionalPath(evaluationPath),
+    evaluationPath,
     statisticsPath,
     manifestPath: await optionalPath(
       path.join(resultDirectory, "manifest.json")
@@ -198,7 +220,15 @@ export async function scanAriadneWorkspace(
   rootDir: string,
   options: ScanAriadneWorkspaceOptions = {}
 ): Promise<WorkspaceRunDescriptor[]> {
-  const statisticsPaths = await findFilesByName(rootDir, "statistics.json.gz")
+  const artifactPaths = await findFilesByNames(rootDir, [
+    "statistics.json.gz",
+    "statistics.json",
+    "routes.json.gz",
+    "routes.json",
+  ])
+  const statisticsPaths = artifactPaths.filter((artifactPath) =>
+    isNamedJsonArtifact(artifactPath, "statistics")
+  )
   const descriptors = new Map<string, WorkspaceRunDescriptor>()
 
   for (const statisticsPath of statisticsPaths) {
@@ -211,17 +241,23 @@ export async function scanAriadneWorkspace(
     }
   }
 
-  const routesPaths = await findFilesByName(rootDir, "routes.json.gz")
+  const coveredRoutesPaths = new Set(
+    Array.from(descriptors.values()).map(
+      (descriptor) => descriptor.processedRoutesPath
+    )
+  )
+  const routesPaths = artifactPaths.filter((artifactPath) =>
+    isNamedJsonArtifact(artifactPath, "routes")
+  )
   for (const routesPath of routesPaths) {
     const descriptor = await descriptorFromRoutesPath(rootDir, routesPath)
     if (
       descriptor &&
       shouldKeepDescriptor(descriptor, options) &&
-      !Array.from(descriptors.values()).some(
-        (existing) => existing.processedRoutesPath === routesPath
-      )
+      !coveredRoutesPaths.has(routesPath)
     ) {
       descriptors.set(descriptorKey(descriptor), descriptor)
+      coveredRoutesPaths.add(routesPath)
     }
   }
 
