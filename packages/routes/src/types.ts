@@ -88,6 +88,7 @@ export type ProjectedRouteStep = {
   reagents: string[] | null
   solvents: string[] | null
   metadata: JsonObject
+  isConvergent: boolean
 }
 
 export type ProjectedRouteStepInput = {
@@ -114,6 +115,27 @@ export type RouteVisualizationNode = {
   smiles: string
   inchikey: string
   children?: RouteVisualizationNode[]
+}
+
+export type RouteInspectionNode = {
+  ref: string
+  molecule: {
+    smiles: string
+    inchikey: string
+    metadata: JsonObject
+  }
+  depth: number
+  children: RouteInspectionNode[]
+  incomingStep?: {
+    ref: string
+    reactionSignature: string
+    mappedSmiles: string | null
+    template: string | null
+    reagents: string[] | null
+    solvents: string[] | null
+    metadata: JsonObject
+    isConvergent: boolean
+  }
 }
 
 export type VendorSource =
@@ -160,7 +182,13 @@ export type RouteGraphNode = {
   link?: string | null
   routeCount?: number
   routeTotal?: number
+  badges?: RouteGraphNodeBadge[]
   [key: string]: unknown
+}
+
+export type RouteGraphNodeBadge = {
+  label: string
+  tone?: "neutral" | "success" | "warning" | "danger"
 }
 
 export const ROUTE_LAYOUT_MODES = [
@@ -187,11 +215,31 @@ export type LayoutNode = {
   inchikey: string
   x: number
   y: number
+  routeNode?: RouteVisualizationNode
 }
 
 export type LayoutEdge = {
   source: string
   target: string
+}
+
+export type RouteGraphNodeContext = {
+  node: LayoutNode
+  routeNode?: RouteVisualizationNode
+  status: NodeStatus
+  inStock?: boolean
+  isLeaf?: boolean
+}
+
+export type RouteGraphEdgeContext = {
+  edge: LayoutEdge
+  sourceNode?: LayoutNode
+  targetNode?: LayoutNode
+}
+
+export type RouteGraphBuildOptions = {
+  mapNodeData?: (context: RouteGraphNodeContext) => Partial<RouteGraphNode>
+  mapEdgeData?: (context: RouteGraphEdgeContext) => Record<string, unknown>
 }
 
 export type RouteLayout = {
@@ -217,6 +265,7 @@ export type FlowEdge = {
   target: string
   animated?: boolean
   style?: Record<string, string | number>
+  data?: Record<string, unknown>
 }
 
 export type RouteGraph = {

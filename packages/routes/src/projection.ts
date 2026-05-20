@@ -17,6 +17,7 @@ import type {
   RetrocastRoutesByTarget,
   RouteProjection,
   RouteProjectionRecords,
+  RouteInspectionNode,
   RouteVisualizationNode,
 } from "./types.js"
 
@@ -120,6 +121,48 @@ function createVisualizationNode(
   }
 }
 
+function createInspectionNode(
+  molecule: RetrocastMolecule,
+  depth: number,
+  ref: string
+): RouteInspectionNode {
+  const children =
+    molecule.synthesis_step?.reactants.map((reactant, index) =>
+      createInspectionNode(reactant, depth + 1, `${ref}.${index}`)
+    ) ?? []
+  const step = molecule.synthesis_step
+  const nonLeafReactants =
+    step?.reactants.filter((reactant) => reactant.synthesis_step !== null) ?? []
+
+  return {
+    ref,
+    molecule: {
+      smiles: molecule.smiles,
+      inchikey: molecule.inchikey,
+      metadata: metadataOrEmpty(molecule.metadata),
+    },
+    depth,
+    children,
+    ...(step
+      ? {
+          incomingStep: {
+            ref: `${ref}:step`,
+            reactionSignature: computeReactionSignature(
+              step,
+              molecule.inchikey
+            ),
+            mappedSmiles: step.mapped_smiles ?? null,
+            template: step.template ?? null,
+            reagents: step.reagents ?? null,
+            solvents: step.solvents ?? null,
+            metadata: metadataOrEmpty(step.metadata),
+            isConvergent: step.is_convergent ?? nonLeafReactants.length >= 2,
+          },
+        }
+      : {}),
+  }
+}
+
 function rememberMolecule(
   state: MutableProjection,
   molecule: RetrocastMolecule
@@ -202,6 +245,9 @@ function visitMolecule(
     molecule.synthesis_step,
     molecule.inchikey
   )
+  const nonLeafReactants = molecule.synthesis_step.reactants.filter(
+    (reactant) => reactant.synthesis_step !== null
+  )
   const reactionRef = rememberReaction(state, molecule, reactionSignature)
   const stepIndex = state.stepCounter++
   const stepRef = `step:${stepIndex}`
@@ -216,6 +262,8 @@ function visitMolecule(
     reagents: molecule.synthesis_step.reagents ?? null,
     solvents: molecule.synthesis_step.solvents ?? null,
     metadata: metadataOrEmpty(molecule.synthesis_step.metadata),
+    isConvergent:
+      molecule.synthesis_step.is_convergent ?? nonLeafReactants.length >= 2,
   })
 
   molecule.synthesis_step.reactants.forEach((reactant, position) => {
@@ -301,6 +349,80 @@ export function routeProjectionToVisualizationTree(
   projection: RouteProjection
 ): RouteVisualizationNode {
   return projection.visualizationTree
+}
+
+export function retrocastRouteToInspectionTree(
+  route: RetrocastRoute
+): RouteInspectionNode {
+  assertRetrocastRoute(route)
+  return createInspectionNode(route.target, 0, "node:0")
+}
+
+export function routeProjectionToInspectionTree(
+  projection: RouteProjection
+): RouteInspectionNode {
+  const moleculeByInchikey = new Map(
+    projection.molecules.map((molecule) => [molecule.inchikey, molecule])
+  )
+  const nodeByRef = new Map(projection.nodes.map((node) => [node.ref, node]))
+  const stepsByProductNodeRef = new Map(
+    projection.steps.map((step) => [step.productNodeRef, step])
+  )
+  const reactionByRef = new Map(
+    projection.reactions.map((reaction) => [reaction.ref, reaction])
+  )
+  const stepInputsByStepRef = new Map<string, ProjectedRouteStepInput[]>()
+
+  for (const input of projection.stepInputs) {
+    const inputs = stepInputsByStepRef.get(input.routeStepRef) ?? []
+    inputs.push(input)
+    stepInputsByStepRef.set(input.routeStepRef, inputs)
+  }
+
+  function visit(nodeRef: string): RouteInspectionNode {
+    const node = nodeByRef.get(nodeRef)
+    if (!node) {
+      throw new Error(`projection node ${nodeRef} was not found`)
+    }
+
+    const molecule = moleculeByInchikey.get(node.moleculeInchikey)
+    if (!molecule) {
+      throw new Error(
+        `projection molecule ${node.moleculeInchikey} was not found`
+      )
+    }
+
+    const step = stepsByProductNodeRef.get(node.ref)
+    const children = step
+      ? [...(stepInputsByStepRef.get(step.ref) ?? [])]
+          .sort((a, b) => a.position - b.position)
+          .map((input) => visit(input.routeNodeRef))
+      : []
+    const reaction = step ? reactionByRef.get(step.reactionRef) : undefined
+
+    return {
+      ref: node.ref,
+      molecule,
+      depth: node.depth,
+      children,
+      ...(step
+        ? {
+            incomingStep: {
+              ref: step.ref,
+              reactionSignature: reaction?.signature ?? step.reactionRef,
+              mappedSmiles: step.mappedSmiles,
+              template: step.template,
+              reagents: step.reagents,
+              solvents: step.solvents,
+              metadata: step.metadata,
+              isConvergent: step.isConvergent,
+            },
+          }
+        : {}),
+    }
+  }
+
+  return visit(projection.route.rootNodeRef)
 }
 
 export function projectRetrocastRoutes(

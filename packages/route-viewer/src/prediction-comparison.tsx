@@ -24,6 +24,10 @@ export type PredictionComparisonProps = {
   buyableMetadataMap?: Map<string, BuyableMetadata>
   model1Label?: string
   model2Label?: string
+  selectedNodeId?: string
+  selectedEdgeId?: string
+  onNodeSelect?: (nodeId: string, data: RouteGraphNode) => void
+  onEdgeSelect?: (edgeId: string, data: Record<string, unknown>) => void
 }
 
 export function PredictionComparison({
@@ -34,6 +38,10 @@ export function PredictionComparison({
   buyableMetadataMap,
   model1Label = "route 1",
   model2Label = "route 2",
+  selectedNodeId,
+  selectedEdgeId,
+  onNodeSelect,
+  onEdgeSelect,
 }: PredictionComparisonProps) {
   const graphs = useMemo(() => {
     if (mode === "diff-overlay") {
@@ -84,6 +92,10 @@ export function PredictionComparison({
       <FlowPanel
         nodes={graphs.diff.nodes as Node<RouteGraphNode>[]}
         edges={graphs.diff.edges as Edge[]}
+        selectedNodeId={selectedNodeId}
+        selectedEdgeId={selectedEdgeId}
+        onNodeSelect={onNodeSelect}
+        onEdgeSelect={onEdgeSelect}
       />
     )
   }
@@ -110,6 +122,10 @@ export function PredictionComparison({
           nodes={graphs.pred1.nodes as Node<RouteGraphNode>[]}
           edges={graphs.pred1.edges as Edge[]}
           title={model1Label}
+          selectedNodeId={selectedNodeId}
+          selectedEdgeId={selectedEdgeId}
+          onNodeSelect={onNodeSelect}
+          onEdgeSelect={onEdgeSelect}
         />
       </div>
       <div style={{ minWidth: 0 }}>
@@ -117,6 +133,10 @@ export function PredictionComparison({
           nodes={graphs.pred2.nodes as Node<RouteGraphNode>[]}
           edges={graphs.pred2.edges as Edge[]}
           title={model2Label}
+          selectedNodeId={selectedNodeId}
+          selectedEdgeId={selectedEdgeId}
+          onNodeSelect={onNodeSelect}
+          onEdgeSelect={onEdgeSelect}
         />
       </div>
     </div>

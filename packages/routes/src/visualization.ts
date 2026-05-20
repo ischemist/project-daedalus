@@ -7,6 +7,7 @@ import type {
   MergedRouteNode,
   NodeStatus,
   RouteGraph,
+  RouteGraphBuildOptions,
   RouteGraphNode,
   RouteLayout,
   RouteVisualizationNode,
@@ -32,6 +33,7 @@ type InternalLayoutNode = {
   width?: number
   x?: number
   y?: number
+  routeNode?: RouteVisualizationNode
 }
 
 type InternalLayoutNodeWithStatus = InternalLayoutNode & {
@@ -89,6 +91,7 @@ function buildLayoutTree(
     id: nodeId,
     smiles: node.smiles,
     inchikey: node.inchikey,
+    routeNode: node,
     children: (node.children ?? []).map((child, index) =>
       buildLayoutTree(child, `${nodeId}-${index}-`)
     ),
@@ -135,6 +138,7 @@ function flattenLayoutTree(
     inchikey: node.inchikey,
     x: node.x ?? 0,
     y: node.y ?? 0,
+    routeNode: node.routeNode,
   })
 
   if (parentId) {
@@ -183,13 +187,27 @@ export function collectSmiles(
   return set
 }
 
-function toFlowEdges(edges: LayoutEdge[], idPrefix: string): FlowEdge[] {
+function toFlowEdges(
+  edges: LayoutEdge[],
+  idPrefix: string,
+  nodeById?: Map<string, LayoutNode>,
+  options: RouteGraphBuildOptions = {}
+): FlowEdge[] {
   return edges.map((edge, index) => ({
     id: `${idPrefix}edge-${index}`,
     source: edge.source,
     target: edge.target,
     animated: false,
     style: { stroke: "#94a3b8", strokeWidth: 2 },
+    ...(options.mapEdgeData
+      ? {
+          data: options.mapEdgeData({
+            edge,
+            sourceNode: nodeById?.get(edge.source),
+            targetNode: nodeById?.get(edge.target),
+          }),
+        }
+      : {}),
   }))
 }
 
@@ -215,10 +233,18 @@ function createGraphNode(
   status: NodeStatus,
   inStockInchiKeys: Set<string> | undefined,
   buyableMetadataMap: Map<string, BuyableMetadata> | undefined,
-  isLeaf?: boolean
+  isLeaf?: boolean,
+  options: RouteGraphBuildOptions = {}
 ): FlowNode<RouteGraphNode> {
   const metadata = metadataFor(buyableMetadataMap, node.inchikey)
   const inStock = inStockInchiKeys?.has(node.inchikey)
+  const mappedData = options.mapNodeData?.({
+    node,
+    routeNode: node.routeNode,
+    status,
+    inStock,
+    isLeaf,
+  })
 
   return {
     id: node.id,
@@ -234,6 +260,7 @@ function createGraphNode(
       source: metadata?.source,
       leadTime: metadata?.leadTime,
       link: metadata?.link,
+      ...mappedData,
     },
   }
 }
@@ -242,10 +269,12 @@ export function buildRouteGraph(
   route: RouteVisualizationNode,
   inStockInchiKeys: Set<string> = new Set(),
   idPrefix = "route-",
-  buyableMetadataMap?: Map<string, BuyableMetadata>
+  buyableMetadataMap?: Map<string, BuyableMetadata>,
+  options: RouteGraphBuildOptions = {}
 ): RouteGraph {
   const layout = layoutTree(route, idPrefix)
   const leafNodeIds = buildLeafNodeSet(layout.edges, layout.nodes)
+  const nodeById = new Map(layout.nodes.map((node) => [node.id, node]))
   return {
     nodes: layout.nodes.map((node) =>
       createGraphNode(
@@ -253,10 +282,11 @@ export function buildRouteGraph(
         "default",
         inStockInchiKeys,
         buyableMetadataMap,
-        leafNodeIds.has(node.id)
+        leafNodeIds.has(node.id),
+        options
       )
     ),
-    edges: toFlowEdges(layout.edges, idPrefix),
+    edges: toFlowEdges(layout.edges, idPrefix, nodeById, options),
   }
 }
 

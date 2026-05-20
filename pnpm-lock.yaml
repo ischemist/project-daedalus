@@ -191,6 +191,19 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/retrocast-io:
+    dependencies:
+      '@ischemist/routes':
+        specifier: workspace:^
+        version: link:../routes
+    devDependencies:
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.6.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/routes:
     devDependencies:
       '@types/node':

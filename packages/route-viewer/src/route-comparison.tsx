@@ -23,6 +23,10 @@ export type RouteComparisonProps = {
   buyableMetadataMap?: Map<string, BuyableMetadata>
   referenceLabel?: string
   comparedLabel?: string
+  selectedNodeId?: string
+  selectedEdgeId?: string
+  onNodeSelect?: (nodeId: string, data: RouteGraphNode) => void
+  onEdgeSelect?: (edgeId: string, data: Record<string, unknown>) => void
 }
 
 export function RouteComparison({
@@ -33,6 +37,10 @@ export function RouteComparison({
   buyableMetadataMap,
   referenceLabel = "reference route",
   comparedLabel = "compared route",
+  selectedNodeId,
+  selectedEdgeId,
+  onNodeSelect,
+  onEdgeSelect,
 }: RouteComparisonProps) {
   const graphs = useMemo(() => {
     if (mode === "diff-overlay") {
@@ -81,6 +89,10 @@ export function RouteComparison({
       <FlowPanel
         nodes={graphs.diff.nodes as Node<RouteGraphNode>[]}
         edges={graphs.diff.edges as Edge[]}
+        selectedNodeId={selectedNodeId}
+        selectedEdgeId={selectedEdgeId}
+        onNodeSelect={onNodeSelect}
+        onEdgeSelect={onEdgeSelect}
       />
     )
   }
@@ -107,6 +119,10 @@ export function RouteComparison({
           nodes={graphs.reference.nodes as Node<RouteGraphNode>[]}
           edges={graphs.reference.edges as Edge[]}
           title={referenceLabel}
+          selectedNodeId={selectedNodeId}
+          selectedEdgeId={selectedEdgeId}
+          onNodeSelect={onNodeSelect}
+          onEdgeSelect={onEdgeSelect}
         />
       </div>
       <div style={{ minWidth: 0 }}>
@@ -114,6 +130,10 @@ export function RouteComparison({
           nodes={graphs.compared.nodes as Node<RouteGraphNode>[]}
           edges={graphs.compared.edges as Edge[]}
           title={comparedLabel}
+          selectedNodeId={selectedNodeId}
+          selectedEdgeId={selectedEdgeId}
+          onNodeSelect={onNodeSelect}
+          onEdgeSelect={onEdgeSelect}
         />
       </div>
     </div>
