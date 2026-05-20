@@ -1,6 +1,6 @@
 {
   "name": "@ischemist/retrocast-io",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "node-only retrocast workspace artifact discovery and audit bundle loaders",
   "type": "module",
   "sideEffects": false,
