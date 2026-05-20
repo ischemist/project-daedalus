@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "pnpm --filter @ischemist/web dev",
     "build": "pnpm packages:build && pnpm --filter @ischemist/web build",
-    "packages:build": "pnpm --filter @ischemist/routes build && pnpm --filter @ischemist/route-viewer build",
+    "packages:build": "pnpm --filter @ischemist/routes build && pnpm --filter @ischemist/retrocast-io build && pnpm --filter @ischemist/route-viewer build",
     "lint": "pnpm packages:build && oxlint --type-aware --quiet apps/web packages",
-    "check-types": "pnpm packages:build && pnpm --filter @ischemist/routes check-types && pnpm --filter @ischemist/route-viewer check-types && tsgo --project apps/web/tsconfig.json --noEmit",
+    "check-types": "pnpm packages:build && pnpm --filter @ischemist/routes check-types && pnpm --filter @ischemist/retrocast-io check-types && pnpm --filter @ischemist/route-viewer check-types && tsgo --project apps/web/tsconfig.json --noEmit",
     "typecheck": "pnpm check-types",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",

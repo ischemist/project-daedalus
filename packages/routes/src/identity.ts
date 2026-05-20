@@ -1,4 +1,8 @@
-import type { RetrocastMolecule, RetrocastReactionStep } from "./types.js"
+import type {
+  RetrocastMolecule,
+  RetrocastReactionStep,
+  RetrocastRoute,
+} from "./types.js"
 
 const SHA256_INITIAL_HASH = [
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
@@ -120,6 +124,47 @@ export function computeRouteLength(root: RetrocastMolecule): number {
   return (
     1 + Math.max(0, ...root.synthesis_step.reactants.map(computeRouteLength))
   )
+}
+
+export function countRouteSteps(root: RetrocastMolecule): number {
+  if (!root.synthesis_step) {
+    return 0
+  }
+
+  return (
+    1 +
+    root.synthesis_step.reactants.reduce(
+      (total, reactant) => total + countRouteSteps(reactant),
+      0
+    )
+  )
+}
+
+export function computeRootReactionSignature(
+  routeOrRoot: RetrocastRoute | RetrocastMolecule
+): string | null {
+  const root = "target" in routeOrRoot ? routeOrRoot.target : routeOrRoot
+  if (!root.synthesis_step) {
+    return null
+  }
+
+  return computeReactionSignature(root.synthesis_step, root.inchikey)
+}
+
+export function getRootReactantInchikeys(
+  routeOrRoot: RetrocastRoute | RetrocastMolecule
+): string[] {
+  const root = "target" in routeOrRoot ? routeOrRoot.target : routeOrRoot
+  return (
+    root.synthesis_step?.reactants.map((reactant) => reactant.inchikey) ?? []
+  )
+}
+
+export function getRootProductInchikey(
+  routeOrRoot: RetrocastRoute | RetrocastMolecule
+): string {
+  const root = "target" in routeOrRoot ? routeOrRoot.target : routeOrRoot
+  return root.inchikey
 }
 
 export function hasConvergentReaction(root: RetrocastMolecule): boolean {

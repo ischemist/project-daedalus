@@ -8,7 +8,12 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react"
-import type { Edge, Node } from "@xyflow/react"
+import type {
+  Edge,
+  EdgeMouseHandler,
+  Node,
+  NodeMouseHandler,
+} from "@xyflow/react"
 import type { RouteGraphNode } from "@ischemist/routes"
 
 import { MoleculeNode } from "./molecule-node.js"
@@ -82,20 +87,71 @@ export type FlowPanelProps = {
   nodes: Node<RouteGraphNode>[]
   edges: Edge[]
   title?: string
+  selectedNodeId?: string
+  selectedEdgeId?: string
+  onNodeSelect?: (nodeId: string, data: RouteGraphNode) => void
+  onEdgeSelect?: (edgeId: string, data: Record<string, unknown>) => void
+}
+
+function applyNodeSelection(
+  nodes: Node<RouteGraphNode>[],
+  selectedNodeId: string | undefined
+): Node<RouteGraphNode>[] {
+  return nodes.map((node) => ({
+    ...node,
+    selected: selectedNodeId ? node.id === selectedNodeId : node.selected,
+  }))
+}
+
+function applyEdgeSelection(
+  edges: Edge[],
+  selectedEdgeId: string | undefined
+): Edge[] {
+  return edges.map((edge) => ({
+    ...edge,
+    selected: selectedEdgeId ? edge.id === selectedEdgeId : edge.selected,
+  }))
 }
 
 export function FlowPanel({
   nodes: initialNodes,
   edges: initialEdges,
   title,
+  selectedNodeId,
+  selectedEdgeId,
+  onNodeSelect,
+  onEdgeSelect,
 }: FlowPanelProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    applyNodeSelection(initialNodes, selectedNodeId)
+  )
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    applyEdgeSelection(initialEdges, selectedEdgeId)
+  )
 
   useEffect(() => {
-    setNodes(initialNodes)
-    setEdges(initialEdges)
-  }, [initialEdges, initialNodes, setEdges, setNodes])
+    setNodes(applyNodeSelection(initialNodes, selectedNodeId))
+    setEdges(applyEdgeSelection(initialEdges, selectedEdgeId))
+  }, [
+    initialEdges,
+    initialNodes,
+    selectedEdgeId,
+    selectedNodeId,
+    setEdges,
+    setNodes,
+  ])
+
+  const handleNodeClick: NodeMouseHandler<Node<RouteGraphNode>> = (_, node) => {
+    onNodeSelect?.(node.id, node.data)
+  }
+  const handleEdgeClick: EdgeMouseHandler = (_, edge) => {
+    onEdgeSelect?.(edge.id, (edge.data ?? {}) as Record<string, unknown>)
+  }
+  const elementsSelectable =
+    Boolean(selectedNodeId) ||
+    Boolean(selectedEdgeId) ||
+    Boolean(onNodeSelect) ||
+    Boolean(onEdgeSelect)
 
   return (
     <div
@@ -125,12 +181,14 @@ export function FlowPanel({
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2, minZoom: 0.1, maxZoom: 4 }}
           nodesDraggable
           nodesConnectable={false}
-          elementsSelectable={false}
+          elementsSelectable={elementsSelectable}
         >
           <style>{flowPanelStyles}</style>
           <Background color="#cbd5e1" gap={16} />

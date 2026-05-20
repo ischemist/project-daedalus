@@ -4,7 +4,11 @@ import { useEffect, useState } from "react"
 import { Handle, Position } from "@xyflow/react"
 import type { Node, NodeProps } from "@xyflow/react"
 import { CheckIcon, CopyIcon, InfoIcon, PackageIcon } from "lucide-react"
-import type { RouteGraphNode, VendorSource } from "@ischemist/routes"
+import type {
+  RouteGraphNode,
+  RouteGraphNodeBadge,
+  VendorSource,
+} from "@ischemist/routes"
 
 import { MoleculeSvg } from "./molecule-svg.js"
 
@@ -38,6 +42,29 @@ const vendorNames: Record<VendorSource, string> = {
   SA: "sigma aldrich",
   CB: "chembridge",
 }
+
+const badgeStyles = {
+  neutral: {
+    background: "rgb(100 116 139 / 0.14)",
+    border: "1px solid rgb(100 116 139 / 0.28)",
+    color: "#475569",
+  },
+  success: {
+    background: "rgb(16 185 129 / 0.14)",
+    border: "1px solid rgb(16 185 129 / 0.3)",
+    color: "#047857",
+  },
+  warning: {
+    background: "rgb(245 158 11 / 0.16)",
+    border: "1px solid rgb(245 158 11 / 0.34)",
+    color: "#92400e",
+  },
+  danger: {
+    background: "rgb(239 68 68 / 0.13)",
+    border: "1px solid rgb(239 68 68 / 0.3)",
+    color: "#b91c1c",
+  },
+} satisfies Record<string, React.CSSProperties>
 
 function formatPrice(ppg: number) {
   if (ppg < 1) return `$${ppg.toFixed(2)}/g`
@@ -119,6 +146,9 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
   const routeTotal =
     typeof data.routeTotal === "number" ? data.routeTotal : undefined
   const statusStyle = statusStyles[status]
+  const badges: RouteGraphNodeBadge[] = Array.isArray(data.badges)
+    ? data.badges
+    : []
 
   return (
     <div
@@ -355,6 +385,42 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
             <PackageIcon size={12} />
             {inStock ? "in stock" : "not in stock"}
           </span>
+        ) : null}
+        {badges.length > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+              justifyContent: "center",
+              marginTop: 5,
+              maxWidth: "100%",
+            }}
+          >
+            {badges.map((badge, index) => {
+              const tone = badge.tone ?? "neutral"
+              return (
+                <span
+                  key={`${badge.label}-${index}`}
+                  style={{
+                    ...badgeStyles[tone],
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    maxWidth: 148,
+                    overflow: "hidden",
+                    padding: "3px 6px",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={badge.label}
+                >
+                  {badge.label}
+                </span>
+              )
+            })}
+          </div>
         ) : null}
       </div>
       <Handle

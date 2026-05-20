@@ -16,6 +16,10 @@ export type RouteOverlayProps = {
   inStockInchiKeys?: Set<string>
   buyableMetadataMap?: Map<string, BuyableMetadata>
   idPrefix?: string
+  selectedNodeId?: string
+  selectedEdgeId?: string
+  onNodeSelect?: (nodeId: string, data: RouteGraphNode) => void
+  onEdgeSelect?: (edgeId: string, data: Record<string, unknown>) => void
 }
 
 export function RouteOverlay({
@@ -23,6 +27,10 @@ export function RouteOverlay({
   inStockInchiKeys = new Set(),
   buyableMetadataMap,
   idPrefix = "overlay_",
+  selectedNodeId,
+  selectedEdgeId,
+  onNodeSelect,
+  onEdgeSelect,
 }: RouteOverlayProps) {
   const graph = useMemo(
     () =>
@@ -39,6 +47,10 @@ export function RouteOverlay({
     <FlowPanel
       nodes={graph.nodes as Node<RouteGraphNode>[]}
       edges={graph.edges as Edge[]}
+      selectedNodeId={selectedNodeId}
+      selectedEdgeId={selectedEdgeId}
+      onNodeSelect={onNodeSelect}
+      onEdgeSelect={onEdgeSelect}
     />
   )
 }
