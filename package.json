@@ -25,13 +25,13 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.9.1",
     "@typescript/native-preview": "beta",
-    "lefthook": "^2.1.6",
-    "oxfmt": "^0.46.0",
-    "oxlint": "^1.61.0",
-    "oxlint-tsgolint": "^0.21.1",
-    "tsx": "^4.20.6",
+    "lefthook": "^2.1.9",
+    "oxfmt": "^0.53.0",
+    "oxlint": "^1.68.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }
