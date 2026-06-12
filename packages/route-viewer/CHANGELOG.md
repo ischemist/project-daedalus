@@ -1,5 +1,16 @@
 # @ischemist/route-viewer
 
+## 0.0.10
+
+### Patch Changes
+
+- f78205a: upgrade retrocast artifact support to the v0.7 schema.
+
+  `@ischemist/routes` now reads v0.7 route trees with `product_of`, `annotations`, route-path refs, and collected `Candidate` payloads instead of legacy `routes.json` route arrays. `@ischemist/retrocast-io` now scans and loads `candidates.json.gz`, `evaluation.json.gz`, and `analysis.json.gz` artifacts with evaluation data under `targets`.
+
+- Updated dependencies [f78205a]
+  - @ischemist/routes@0.1.0
+
 ## 0.0.9
 
 ### Patch Changes
