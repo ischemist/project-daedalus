@@ -3,42 +3,46 @@ export type JsonObject = Record<string, unknown>
 export type RetrocastMolecule = {
   smiles: string
   inchikey: string
-  synthesis_step: RetrocastReactionStep | null
-  metadata?: JsonObject
-  is_leaf?: boolean
+  product_of?: RetrocastReaction | null
+  annotations?: JsonObject
 }
 
-export type RetrocastReactionStep = {
+export type RetrocastReaction = {
   reactants: RetrocastMolecule[]
-  mapped_smiles?: string | null
+  mapped_reaction_smiles?: string | null
   template?: string | null
   reagents?: string[] | null
   solvents?: string[] | null
-  metadata?: JsonObject
-  is_convergent?: boolean
+  annotations?: JsonObject
 }
 
 export type RetrocastRoute = {
   target: RetrocastMolecule
-  rank?: number
-  metadata?: JsonObject
-  retrocast_version?: string
-  length?: number
-  has_convergent_reaction?: boolean
-  content_hash?: string
-  signature?: string
-  leaves?: RetrocastMolecule[]
+  annotations?: JsonObject
+  schema_version: "2"
 }
 
-export type RetrocastRoutesByTarget = Record<string, RetrocastRoute[]>
+export type RetrocastFailureRecord = {
+  code: string
+  message?: string | null
+  target_id?: string | null
+  target_smiles?: string | null
+  target_inchikey?: string | null
+  context?: JsonObject
+}
+
+export type RetrocastCandidate = {
+  rank: number
+  route?: RetrocastRoute | null
+  failure?: RetrocastFailureRecord | null
+}
+
+export type RetrocastCandidatesByTarget = Record<string, RetrocastCandidate[]>
 
 export type RouteProjectionSource = {
   targetId?: string
   rank?: number
-  retrocastVersion?: string
-  metadata: JsonObject
-  sourceSignature?: string
-  sourceContentHash?: string
+  annotations: JsonObject
 }
 
 export type ProjectedMolecule = {

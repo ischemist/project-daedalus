@@ -1,16 +1,9 @@
 import type {
+  RetrocastCandidate,
+  RetrocastCandidatesByTarget,
   JsonObject,
   RetrocastRoute,
-  RetrocastRoutesByTarget,
 } from "@ischemist/routes"
-
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonObject
-  | JsonValue[]
 
 export type WorkspaceRunDescriptor = {
   rootDir: string
@@ -21,21 +14,25 @@ export type WorkspaceRunDescriptor = {
   split: string
   prompt: string
   checkpointLabel: string
-  stockKey: string
+  scoreLabel: string
   benchmarkName: string
-  processedRoutesPath: string
+  processedCandidatesPath: string
   evaluationPath?: string
-  statisticsPath?: string
+  analysisPath?: string
   manifestPath?: string
   ariadneMetadataPath?: string
+}
+
+export type RetrocastTaskConstraint = {
+  kind: string
+  [key: string]: unknown
 }
 
 export type BenchmarkTargetDefinition = {
   id: string
   smiles: string
-  inchi_key?: string
-  inchikey?: string
-  metadata?: JsonObject
+  inchikey: string
+  annotations?: JsonObject
   acceptable_routes: RetrocastRoute[]
   [key: string]: unknown
 }
@@ -43,31 +40,41 @@ export type BenchmarkTargetDefinition = {
 export type BenchmarkDefinition = {
   name: string
   description?: string
-  stock_name?: string
   targets: Record<string, BenchmarkTargetDefinition>
+  default_constraints?: RetrocastTaskConstraint[]
+  constraints?: Record<string, RetrocastTaskConstraint[]>
+  metric_label?: string | null
+  annotations?: JsonObject
+  schema_version: "2"
   [key: string]: unknown
 }
 
-export type RetrocastRouteEvaluation = {
+export type RetrocastScoredCandidate = RetrocastCandidate & {
   rank: number
-  is_solved?: boolean
+  validity?: JsonObject
+  constraints?: JsonObject
   matches_acceptable?: boolean
   matched_acceptable_index?: number | null
   [key: string]: unknown
 }
 
 export type RetrocastTargetEvaluation = {
-  target_id: string
-  routes: RetrocastRouteEvaluation[]
+  target: BenchmarkTargetDefinition
+  effective_constraints: RetrocastTaskConstraint[]
+  candidates: RetrocastScoredCandidate[]
+  wall_time?: number | null
+  cpu_time?: number | null
   [key: string]: unknown
 }
 
 export type RetrocastEvaluationFile = {
-  model_name: string
-  benchmark_name: string
-  stock_name: string
-  has_acceptable_routes?: boolean
-  results: Record<string, RetrocastTargetEvaluation>
+  task: BenchmarkDefinition
+  tiers: number[]
+  metric_label: string
+  acceptable_match_level: string
+  acceptable_route_match: "prefix" | "exact"
+  targets: Record<string, RetrocastTargetEvaluation>
+  schema_version: "2"
   [key: string]: unknown
 }
 
@@ -78,28 +85,19 @@ export type MetricReliability = {
 
 export type MetricEstimate = {
   value: number
-  ci_lower?: number
-  ci_upper?: number
-  n_samples?: number
+  count: number
+  ci_low?: number | null
+  ci_high?: number | null
   reliability?: MetricReliability
   [key: string]: unknown
 }
 
-export type StratifiedMetric = {
-  metric_name: string
-  overall: MetricEstimate
-  by_group?: Record<string, MetricEstimate>
-  [key: string]: unknown
-}
-
-export type RetrocastStatisticsFile = {
-  model_name?: string
-  benchmark?: string
-  benchmark_name?: string
-  stock?: string
-  stock_name?: string
-  solvability?: StratifiedMetric
-  top_k_accuracy?: Record<string, StratifiedMetric>
+export type RetrocastAnalysisFile = {
+  schema_version: "2"
+  metrics: Record<string, MetricEstimate>
+  by_stratum?: Record<string, Record<string, MetricEstimate>>
+  bootstrap_resamples?: number | null
+  runtime?: JsonObject
   [key: string]: unknown
 }
 
@@ -121,15 +119,16 @@ export type RetrocastManifestFile = {
 export type RetrocastCheckpointBundle = {
   descriptor: WorkspaceRunDescriptor
   benchmark?: BenchmarkDefinition
-  routesByTarget: RetrocastRoutesByTarget
+  candidatesByTarget: RetrocastCandidatesByTarget
   evaluation?: RetrocastEvaluationFile
-  statistics?: RetrocastStatisticsFile
+  analysis?: RetrocastAnalysisFile
   manifest?: RetrocastManifestFile
   ariadneMetadata?: JsonObject
 }
 
 export type TargetAuditPrediction = {
   run: WorkspaceRunDescriptor
+  candidates: RetrocastCandidate[]
   routes: RetrocastRoute[]
   evaluation?: RetrocastTargetEvaluation
 }
@@ -155,5 +154,5 @@ export type LoadTargetAuditBundleOptions = {
   targetId: string
   descriptors?: WorkspaceRunDescriptor[]
   benchmarkName?: string
-  stockKey?: string
+  scoreLabel?: string
 }

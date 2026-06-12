@@ -1,10 +1,11 @@
 import path from "node:path"
 
-import { parseRetrocastRoutes } from "@ischemist/routes"
+import { parseRetrocastCandidates } from "@ischemist/routes"
 import type {
+  RetrocastCandidate,
+  RetrocastCandidatesByTarget,
   JsonObject,
   RetrocastRoute,
-  RetrocastRoutesByTarget,
 } from "@ischemist/routes"
 
 import { pathExists, readJsonArtifact, readJsonObject } from "./files.js"
@@ -12,10 +13,10 @@ import type {
   BenchmarkDefinition,
   BenchmarkTargetDefinition,
   LoadBenchmarkDefinitionOptions,
+  RetrocastAnalysisFile,
   RetrocastEvaluationFile,
   RetrocastManifestFile,
-  RetrocastRouteEvaluation,
-  RetrocastStatisticsFile,
+  RetrocastScoredCandidate,
   RetrocastTargetEvaluation,
 } from "./types.js"
 
@@ -41,6 +42,9 @@ function assertBenchmarkTarget(
   if (typeof value.smiles !== "string") {
     throw new Error(`${label}.smiles must be a string`)
   }
+  if (typeof value.inchikey !== "string") {
+    throw new Error(`${label}.inchikey must be a string`)
+  }
   if (!Array.isArray(value.acceptable_routes)) {
     throw new Error(`${label}.acceptable_routes must be an array`)
   }
@@ -50,6 +54,9 @@ function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
   assertObject(value, "benchmark definition")
   if (typeof value.name !== "string") {
     throw new Error("benchmark definition name must be a string")
+  }
+  if (value.schema_version !== "2") {
+    throw new Error('benchmark definition schema_version must be "2"')
   }
   assertObject(value.targets, "benchmark definition targets")
 
@@ -62,17 +69,21 @@ function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
 
 function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
   assertObject(value, "evaluation file")
-  if (typeof value.model_name !== "string") {
-    throw new Error("evaluation file model_name must be a string")
+  if (value.schema_version !== "2") {
+    throw new Error('evaluation file schema_version must be "2"')
   }
-  if (typeof value.benchmark_name !== "string") {
-    throw new Error("evaluation file benchmark_name must be a string")
-  }
-  if (typeof value.stock_name !== "string") {
-    throw new Error("evaluation file stock_name must be a string")
-  }
-  assertObject(value.results, "evaluation file results")
+  assertObject(value.task, "evaluation file task")
+  assertObject(value.targets, "evaluation file targets")
   return value as RetrocastEvaluationFile
+}
+
+function parseAnalysisFile(value: unknown): RetrocastAnalysisFile {
+  assertObject(value, "analysis file")
+  if (value.schema_version !== "2") {
+    throw new Error('analysis file schema_version must be "2"')
+  }
+  assertObject(value.metrics, "analysis file metrics")
+  return value as RetrocastAnalysisFile
 }
 
 function benchmarkNameCandidates(name: string): string[] {
@@ -104,10 +115,10 @@ function benchmarkDefinitionsDirectories(
   return directories
 }
 
-export async function loadRoutesFile(
+export async function loadCandidatesFile(
   filePath: string
-): Promise<RetrocastRoutesByTarget> {
-  return parseRetrocastRoutes(await readJsonArtifact(filePath))
+): Promise<RetrocastCandidatesByTarget> {
+  return parseRetrocastCandidates(await readJsonArtifact(filePath))
 }
 
 export async function loadEvaluationFile(
@@ -116,12 +127,10 @@ export async function loadEvaluationFile(
   return parseEvaluationFile(await readJsonArtifact(filePath))
 }
 
-export async function loadStatisticsFile(
+export async function loadAnalysisFile(
   filePath: string
-): Promise<RetrocastStatisticsFile> {
-  const value = await readJsonArtifact(filePath)
-  assertObject(value, "statistics file")
-  return value as RetrocastStatisticsFile
+): Promise<RetrocastAnalysisFile> {
+  return parseAnalysisFile(await readJsonArtifact(filePath))
 }
 
 export async function loadManifestFile(
@@ -163,31 +172,35 @@ export async function loadBenchmarkDefinition(
   throw new Error(`could not resolve benchmark definition ${pathOrName}`)
 }
 
-export function getPredictionByRank(
-  routes: RetrocastRoute[],
+export function getCandidateByRank(
+  candidates: RetrocastCandidate[],
   rank: number
-): RetrocastRoute | undefined {
-  return routes.find((route, index) => (route.rank ?? index + 1) === rank)
+): RetrocastCandidate | undefined {
+  return candidates.find((candidate) => candidate.rank === rank)
 }
 
 export function getAcceptableRank(
   evaluation: RetrocastTargetEvaluation | undefined
 ): number | null {
-  const match = evaluation?.routes.find((route) => route.matches_acceptable)
+  const match = evaluation?.candidates.find(
+    (candidate) => candidate.matches_acceptable
+  )
   return match?.rank ?? null
 }
 
-export function getFirstMatchingPrediction(
-  routes: RetrocastRoute[],
+export function getFirstMatchingRoute(
+  candidates: RetrocastCandidate[],
   evaluation: RetrocastTargetEvaluation | undefined
 ): RetrocastRoute | undefined {
   const rank = getAcceptableRank(evaluation)
-  return rank == null ? undefined : getPredictionByRank(routes, rank)
+  const candidate =
+    rank == null ? undefined : getCandidateByRank(candidates, rank)
+  return candidate?.route ?? undefined
 }
 
-export function getRouteEvaluationByRank(
+export function getScoredCandidateByRank(
   evaluation: RetrocastTargetEvaluation | undefined,
   rank: number
-): RetrocastRouteEvaluation | undefined {
-  return evaluation?.routes.find((route) => route.rank === rank)
+): RetrocastScoredCandidate | undefined {
+  return evaluation?.candidates.find((candidate) => candidate.rank === rank)
 }

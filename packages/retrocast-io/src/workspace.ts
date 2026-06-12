@@ -3,11 +3,11 @@ import path from "node:path"
 import { findFilesByNames, pathExists } from "./files.js"
 import {
   loadAriadneMetadataFile,
+  loadAnalysisFile,
   loadBenchmarkDefinition,
+  loadCandidatesFile,
   loadEvaluationFile,
   loadManifestFile,
-  loadRoutesFile,
-  loadStatisticsFile,
 } from "./loaders.js"
 import type {
   LoadTargetAuditBundleOptions,
@@ -23,7 +23,7 @@ type ParsedExportPath = {
   stage: string
   benchmarkName: string
   checkpointLabel: string
-  stockKey?: string
+  scoreLabel?: string
 }
 
 function parseExportPath(filePath: string): ParsedExportPath | null {
@@ -45,7 +45,7 @@ function parseExportPath(filePath: string): ParsedExportPath | null {
     return null
   }
 
-  const stockKey =
+  const scoreLabel =
     stage === "4-scored" || stage === "5-results"
       ? parts[exportIndex + 4]
       : undefined
@@ -56,7 +56,7 @@ function parseExportPath(filePath: string): ParsedExportPath | null {
     stage,
     benchmarkName,
     checkpointLabel,
-    stockKey,
+    scoreLabel,
   }
 }
 
@@ -99,7 +99,7 @@ function descriptorKey(descriptor: WorkspaceRunDescriptor): string {
     descriptor.logbookPath,
     descriptor.benchmarkName,
     descriptor.checkpointLabel,
-    descriptor.stockKey,
+    descriptor.scoreLabel,
   ].join("\0")
 }
 
@@ -119,30 +119,30 @@ function sortDescriptors(
       }
     )
     if (checkpoint !== 0) return checkpoint
-    return a.stockKey.localeCompare(b.stockKey)
+    return a.scoreLabel.localeCompare(b.scoreLabel)
   })
 }
 
-async function descriptorFromStatisticsPath(
+async function descriptorFromAnalysisPath(
   rootDir: string,
-  statisticsPath: string
+  analysisPath: string
 ): Promise<WorkspaceRunDescriptor | null> {
-  const parsed = parseExportPath(statisticsPath)
-  if (!parsed || parsed.stage !== "5-results" || !parsed.stockKey) {
+  const parsed = parseExportPath(analysisPath)
+  if (!parsed || parsed.stage !== "5-results" || !parsed.scoreLabel) {
     return null
   }
 
   const runSlug = path.basename(parsed.logbookPath)
-  const processedRoutesPath = await optionalJsonArtifactPath(
+  const processedCandidatesPath = await optionalJsonArtifactPath(
     path.join(
       parsed.retrocastExportPath,
       "3-processed",
       parsed.benchmarkName,
       parsed.checkpointLabel,
-      "routes"
+      "candidates"
     )
   )
-  if (!processedRoutesPath) {
+  if (!processedCandidatesPath) {
     return null
   }
 
@@ -152,11 +152,11 @@ async function descriptorFromStatisticsPath(
       "4-scored",
       parsed.benchmarkName,
       parsed.checkpointLabel,
-      parsed.stockKey,
+      parsed.scoreLabel,
       "evaluation"
     )
   )
-  const resultDirectory = path.dirname(statisticsPath)
+  const resultDirectory = path.dirname(analysisPath)
 
   return {
     rootDir,
@@ -167,11 +167,11 @@ async function descriptorFromStatisticsPath(
     split: inferSplit(parsed.benchmarkName),
     prompt: inferPrompt(parsed.benchmarkName),
     checkpointLabel: parsed.checkpointLabel,
-    stockKey: parsed.stockKey,
+    scoreLabel: parsed.scoreLabel,
     benchmarkName: parsed.benchmarkName,
-    processedRoutesPath,
+    processedCandidatesPath,
     evaluationPath,
-    statisticsPath,
+    analysisPath,
     manifestPath: await optionalPath(
       path.join(resultDirectory, "manifest.json")
     ),
@@ -181,11 +181,11 @@ async function descriptorFromStatisticsPath(
   }
 }
 
-async function descriptorFromRoutesPath(
+async function descriptorFromCandidatesPath(
   rootDir: string,
-  routesPath: string
+  candidatesPath: string
 ): Promise<WorkspaceRunDescriptor | null> {
-  const parsed = parseExportPath(routesPath)
+  const parsed = parseExportPath(candidatesPath)
   if (!parsed || parsed.stage !== "3-processed") {
     return null
   }
@@ -200,9 +200,9 @@ async function descriptorFromRoutesPath(
     split: inferSplit(parsed.benchmarkName),
     prompt: inferPrompt(parsed.benchmarkName),
     checkpointLabel: parsed.checkpointLabel,
-    stockKey: "unknown",
+    scoreLabel: "unknown",
     benchmarkName: parsed.benchmarkName,
-    processedRoutesPath: routesPath,
+    processedCandidatesPath: candidatesPath,
   }
 }
 
@@ -221,43 +221,43 @@ export async function scanAriadneWorkspace(
   options: ScanAriadneWorkspaceOptions = {}
 ): Promise<WorkspaceRunDescriptor[]> {
   const artifactPaths = await findFilesByNames(rootDir, [
-    "statistics.json.gz",
-    "statistics.json",
-    "routes.json.gz",
-    "routes.json",
+    "analysis.json.gz",
+    "analysis.json",
+    "candidates.json.gz",
+    "candidates.json",
   ])
-  const statisticsPaths = artifactPaths.filter((artifactPath) =>
-    isNamedJsonArtifact(artifactPath, "statistics")
+  const analysisPaths = artifactPaths.filter((artifactPath) =>
+    isNamedJsonArtifact(artifactPath, "analysis")
   )
   const descriptors = new Map<string, WorkspaceRunDescriptor>()
 
-  for (const statisticsPath of statisticsPaths) {
-    const descriptor = await descriptorFromStatisticsPath(
-      rootDir,
-      statisticsPath
-    )
+  for (const analysisPath of analysisPaths) {
+    const descriptor = await descriptorFromAnalysisPath(rootDir, analysisPath)
     if (descriptor && shouldKeepDescriptor(descriptor, options)) {
       descriptors.set(descriptorKey(descriptor), descriptor)
     }
   }
 
-  const coveredRoutesPaths = new Set(
+  const coveredCandidatesPaths = new Set(
     Array.from(descriptors.values()).map(
-      (descriptor) => descriptor.processedRoutesPath
+      (descriptor) => descriptor.processedCandidatesPath
     )
   )
-  const routesPaths = artifactPaths.filter((artifactPath) =>
-    isNamedJsonArtifact(artifactPath, "routes")
+  const candidatesPaths = artifactPaths.filter((artifactPath) =>
+    isNamedJsonArtifact(artifactPath, "candidates")
   )
-  for (const routesPath of routesPaths) {
-    const descriptor = await descriptorFromRoutesPath(rootDir, routesPath)
+  for (const candidatesPath of candidatesPaths) {
+    const descriptor = await descriptorFromCandidatesPath(
+      rootDir,
+      candidatesPath
+    )
     if (
       descriptor &&
       shouldKeepDescriptor(descriptor, options) &&
-      !coveredRoutesPaths.has(routesPath)
+      !coveredCandidatesPaths.has(candidatesPath)
     ) {
       descriptors.set(descriptorKey(descriptor), descriptor)
-      coveredRoutesPaths.add(routesPath)
+      coveredCandidatesPaths.add(candidatesPath)
     }
   }
 
@@ -270,19 +270,19 @@ export async function loadCheckpointBundle(
   descriptor: WorkspaceRunDescriptor
 ): Promise<RetrocastCheckpointBundle> {
   const [
-    routesByTarget,
+    candidatesByTarget,
     evaluation,
-    statistics,
+    analysis,
     manifest,
     ariadneMetadata,
     benchmark,
   ] = await Promise.all([
-    loadRoutesFile(descriptor.processedRoutesPath),
+    loadCandidatesFile(descriptor.processedCandidatesPath),
     descriptor.evaluationPath
       ? loadEvaluationFile(descriptor.evaluationPath)
       : Promise.resolve(undefined),
-    descriptor.statisticsPath
-      ? loadStatisticsFile(descriptor.statisticsPath)
+    descriptor.analysisPath
+      ? loadAnalysisFile(descriptor.analysisPath)
       : Promise.resolve(undefined),
     descriptor.manifestPath
       ? loadManifestFile(descriptor.manifestPath)
@@ -298,9 +298,9 @@ export async function loadCheckpointBundle(
   return {
     descriptor,
     benchmark,
-    routesByTarget,
+    candidatesByTarget,
     evaluation,
-    statistics,
+    analysis,
     manifest,
     ariadneMetadata,
   }
@@ -311,14 +311,14 @@ export async function loadTargetAuditBundle({
   targetId,
   descriptors,
   benchmarkName,
-  stockKey,
+  scoreLabel,
 }: LoadTargetAuditBundleOptions): Promise<TargetAuditBundle> {
   const selectedDescriptors = (
     descriptors ?? (await scanAriadneWorkspace(rootDir))
   ).filter(
     (descriptor) =>
       (!benchmarkName || descriptor.benchmarkName === benchmarkName) &&
-      (!stockKey || descriptor.stockKey === stockKey)
+      (!scoreLabel || descriptor.scoreLabel === scoreLabel)
   )
 
   const benchmarkNames = new Set(
@@ -335,17 +335,21 @@ export async function loadTargetAuditBundle({
   const benchmarkTarget = benchmark?.targets[targetId]
   const predictions = await Promise.all(
     selectedDescriptors.map(async (descriptor) => {
-      const [routesByTarget, evaluationFile] = await Promise.all([
-        loadRoutesFile(descriptor.processedRoutesPath),
+      const [candidatesByTarget, evaluationFile] = await Promise.all([
+        loadCandidatesFile(descriptor.processedCandidatesPath),
         descriptor.evaluationPath
           ? loadEvaluationFile(descriptor.evaluationPath)
           : Promise.resolve(undefined),
       ])
 
+      const candidates = candidatesByTarget[targetId] ?? []
       return {
         run: descriptor,
-        routes: routesByTarget[targetId] ?? [],
-        evaluation: evaluationFile?.results[targetId],
+        candidates,
+        routes: candidates.flatMap((candidate) =>
+          candidate.route ? [candidate.route] : []
+        ),
+        evaluation: evaluationFile?.targets[targetId],
       }
     })
   )

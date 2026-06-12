@@ -22,15 +22,15 @@ const projection = projectRetrocastRoute(retrocastRoute)
 const graph = buildRouteGraph(projection.visualizationTree)
 ```
 
-node-only helpers for local retrocast artifacts are available from the `node` subpath:
+node-only helpers for local retrocast candidate artifacts are available from the `node` subpath:
 
 ```ts
-import { loadRetrocastRoutesGzip } from "@ischemist/routes/node"
+import { loadRetrocastCandidatesGzip } from "@ischemist/routes/node"
 ```
 
 ## exports
 
 - `@ischemist/routes`: shared types, projection helpers, signature helpers, visualization helpers
-- `@ischemist/routes/projection`: retrocast parsing and route projection
+- `@ischemist/routes/projection`: retrocast candidate parsing and route projection
 - `@ischemist/routes/visualization`: layout and graph builders
-- `@ischemist/routes/node`: node-only json/gzip loaders
+- `@ischemist/routes/node`: node-only candidate json/gzip loaders

@@ -31,7 +31,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@ischemist/routes": "^0.0.6",
+    "@ischemist/routes": "workspace:^",
     "@xyflow/react": "^12.9.3",
     "lucide-react": "^1.8.0",
     "smiles-drawer": "^2.1.7"

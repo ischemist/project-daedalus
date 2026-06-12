@@ -5,6 +5,8 @@ import {
   hasConvergentReaction,
 } from "./identity.js"
 import type {
+  RetrocastCandidate,
+  RetrocastCandidatesByTarget,
   JsonObject,
   ProjectedMolecule,
   ProjectedReaction,
@@ -14,7 +16,6 @@ import type {
   ProjectedRouteStepInput,
   RetrocastMolecule,
   RetrocastRoute,
-  RetrocastRoutesByTarget,
   RouteProjection,
   RouteProjectionRecords,
   RouteInspectionNode,
@@ -34,10 +35,11 @@ type MutableProjection = {
 
 type ProjectionOptions = {
   targetId?: string
+  rank?: number
 }
 
-function metadataOrEmpty(metadata: JsonObject | undefined): JsonObject {
-  return metadata ?? {}
+function annotationsOrEmpty(annotations: JsonObject | undefined): JsonObject {
+  return annotations ?? {}
 }
 
 function assertRetrocastMolecule(
@@ -55,18 +57,15 @@ function assertRetrocastMolecule(
   if (typeof molecule.inchikey !== "string") {
     throw new Error(`${path}.inchikey must be a string`)
   }
-  if (
-    molecule.synthesis_step !== null &&
-    molecule.synthesis_step !== undefined
-  ) {
-    const step = molecule.synthesis_step as Partial<{ reactants: unknown }>
-    if (!Array.isArray(step.reactants)) {
-      throw new Error(`${path}.synthesis_step.reactants must be an array`)
+  if (molecule.product_of != null) {
+    const reaction = molecule.product_of as Partial<{ reactants: unknown }>
+    if (!Array.isArray(reaction.reactants)) {
+      throw new Error(`${path}.product_of.reactants must be an array`)
     }
-    step.reactants.forEach((reactant, index) => {
+    reaction.reactants.forEach((reactant, index) => {
       assertRetrocastMolecule(
         reactant,
-        `${path}.synthesis_step.reactants[${index}]`
+        `${path}.product_of.reactants[${index}]`
       )
     })
   }
@@ -82,43 +81,75 @@ export function assertRetrocastRoute(
 
   const route = value as Partial<RetrocastRoute>
   assertRetrocastMolecule(route.target, `${path}.target`)
+  if (route.schema_version !== "2") {
+    throw new Error(`${path}.schema_version must be "2"`)
+  }
 }
 
-export function parseRetrocastRoutes(value: unknown): RetrocastRoutesByTarget {
+function assertRetrocastCandidate(
+  value: unknown,
+  path: string
+): asserts value is RetrocastCandidate {
+  if (!value || typeof value !== "object") {
+    throw new Error(`${path} must be an object`)
+  }
+
+  const candidate = value as Partial<RetrocastCandidate>
+  if (typeof candidate.rank !== "number") {
+    throw new Error(`${path}.rank must be a number`)
+  }
+  const hasRoute = candidate.route != null
+  const hasFailure = candidate.failure != null
+  if (!hasRoute && !hasFailure) {
+    throw new Error(`${path} must contain route or failure`)
+  }
+  if (hasRoute && hasFailure) {
+    throw new Error(`${path} cannot contain both route and failure`)
+  }
+  if (hasRoute) {
+    assertRetrocastRoute(candidate.route, `${path}.route`)
+  }
+}
+
+export function parseRetrocastCandidates(
+  value: unknown
+): RetrocastCandidatesByTarget {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(
-      "retrocast routes payload must be an object keyed by target id"
+      "retrocast candidates payload must be an object keyed by target id"
     )
   }
 
-  const routesByTarget: RetrocastRoutesByTarget = {}
-  for (const [targetId, routes] of Object.entries(value)) {
-    if (!Array.isArray(routes)) {
+  const candidatesByTarget: RetrocastCandidatesByTarget = {}
+  for (const [targetId, candidates] of Object.entries(value)) {
+    if (!Array.isArray(candidates)) {
       throw new Error(
-        `retrocast routes payload for target ${targetId} must be an array`
+        `retrocast candidates payload for target ${targetId} must be an array`
       )
     }
 
-    routesByTarget[targetId] = routes.map((route, index) => {
-      assertRetrocastRoute(route, `routes[${targetId}][${index}]`)
-      return route
+    candidatesByTarget[targetId] = candidates.map((candidate, index) => {
+      assertRetrocastCandidate(candidate, `candidates[${targetId}][${index}]`)
+      return candidate
     })
   }
 
-  return routesByTarget
+  return candidatesByTarget
 }
 
 function createVisualizationNode(
   molecule: RetrocastMolecule
 ): RouteVisualizationNode {
-  const children = molecule.synthesis_step?.reactants.map(
-    createVisualizationNode
-  )
+  const children = molecule.product_of?.reactants.map(createVisualizationNode)
   return {
     smiles: molecule.smiles,
     inchikey: molecule.inchikey,
     ...(children && children.length > 0 ? { children } : {}),
   }
+}
+
+function childMoleculeRef(parentRef: string, index: number): string {
+  return parentRef === "rc:m:/" ? `rc:m:/${index}` : `${parentRef}/${index}`
 }
 
 function createInspectionNode(
@@ -127,36 +158,36 @@ function createInspectionNode(
   ref: string
 ): RouteInspectionNode {
   const children =
-    molecule.synthesis_step?.reactants.map((reactant, index) =>
-      createInspectionNode(reactant, depth + 1, `${ref}.${index}`)
+    molecule.product_of?.reactants.map((reactant, index) =>
+      createInspectionNode(reactant, depth + 1, childMoleculeRef(ref, index))
     ) ?? []
-  const step = molecule.synthesis_step
+  const reaction = molecule.product_of
   const nonLeafReactants =
-    step?.reactants.filter((reactant) => reactant.synthesis_step !== null) ?? []
+    reaction?.reactants.filter((reactant) => reactant.product_of != null) ?? []
 
   return {
     ref,
     molecule: {
       smiles: molecule.smiles,
       inchikey: molecule.inchikey,
-      metadata: metadataOrEmpty(molecule.metadata),
+      metadata: annotationsOrEmpty(molecule.annotations),
     },
     depth,
     children,
-    ...(step
+    ...(reaction
       ? {
           incomingStep: {
-            ref: `${ref}:step`,
+            ref: ref.replace("rc:m:", "rc:r:"),
             reactionSignature: computeReactionSignature(
-              step,
+              reaction,
               molecule.inchikey
             ),
-            mappedSmiles: step.mapped_smiles ?? null,
-            template: step.template ?? null,
-            reagents: step.reagents ?? null,
-            solvents: step.solvents ?? null,
-            metadata: metadataOrEmpty(step.metadata),
-            isConvergent: step.is_convergent ?? nonLeafReactants.length >= 2,
+            mappedSmiles: reaction.mapped_reaction_smiles ?? null,
+            template: reaction.template ?? null,
+            reagents: reaction.reagents ?? null,
+            solvents: reaction.solvents ?? null,
+            metadata: annotationsOrEmpty(reaction.annotations),
+            isConvergent: nonLeafReactants.length >= 2,
           },
         }
       : {}),
@@ -171,7 +202,7 @@ function rememberMolecule(
     state.molecules.set(molecule.inchikey, {
       inchikey: molecule.inchikey,
       smiles: molecule.smiles,
-      metadata: metadataOrEmpty(molecule.metadata),
+      metadata: annotationsOrEmpty(molecule.annotations),
     })
   }
 }
@@ -182,7 +213,7 @@ function rememberReaction(
   signature: string
 ): string {
   const reactionRef = `reaction:${signature}`
-  if (!molecule.synthesis_step) {
+  if (!molecule.product_of) {
     return reactionRef
   }
 
@@ -193,7 +224,7 @@ function rememberReaction(
       productInchikey: molecule.inchikey,
     })
 
-    const sortedReactants = molecule.synthesis_step.reactants
+    const sortedReactants = molecule.product_of.reactants
       .map((reactant, sourceIndex) => ({ reactant, sourceIndex }))
       .sort((a, b) => {
         const keyCompare = a.reactant.inchikey.localeCompare(
@@ -219,55 +250,53 @@ function visitMolecule(
   state: MutableProjection,
   molecule: RetrocastMolecule,
   depth: number,
-  rootSignature: string | undefined
+  path: string
 ): string {
   rememberMolecule(state, molecule)
 
   const nodeIndex = state.nodeCounter++
-  const nodeRef = `node:${nodeIndex}`
+  const nodeRef = `rc:m:/${path}`
   const computedSubtreeSignature = computeMoleculeSubtreeSignature(molecule)
-  const subtreeSignature =
-    nodeIndex === 0 && rootSignature ? rootSignature : computedSubtreeSignature
 
   state.nodes.push({
     ref: nodeRef,
     moleculeInchikey: molecule.inchikey,
     nodeIndex,
     depth,
-    subtreeSignature,
+    subtreeSignature: computedSubtreeSignature,
   })
 
-  if (!molecule.synthesis_step) {
+  if (!molecule.product_of) {
     return nodeRef
   }
 
   const reactionSignature = computeReactionSignature(
-    molecule.synthesis_step,
+    molecule.product_of,
     molecule.inchikey
   )
-  const nonLeafReactants = molecule.synthesis_step.reactants.filter(
-    (reactant) => reactant.synthesis_step !== null
+  const nonLeafReactants = molecule.product_of.reactants.filter(
+    (reactant) => reactant.product_of != null
   )
   const reactionRef = rememberReaction(state, molecule, reactionSignature)
   const stepIndex = state.stepCounter++
-  const stepRef = `step:${stepIndex}`
+  const stepRef = `rc:r:/${path}`
 
   state.steps.push({
     ref: stepRef,
     reactionRef,
     productNodeRef: nodeRef,
     stepIndex,
-    mappedSmiles: molecule.synthesis_step.mapped_smiles ?? null,
-    template: molecule.synthesis_step.template ?? null,
-    reagents: molecule.synthesis_step.reagents ?? null,
-    solvents: molecule.synthesis_step.solvents ?? null,
-    metadata: metadataOrEmpty(molecule.synthesis_step.metadata),
-    isConvergent:
-      molecule.synthesis_step.is_convergent ?? nonLeafReactants.length >= 2,
+    mappedSmiles: molecule.product_of.mapped_reaction_smiles ?? null,
+    template: molecule.product_of.template ?? null,
+    reagents: molecule.product_of.reagents ?? null,
+    solvents: molecule.product_of.solvents ?? null,
+    metadata: annotationsOrEmpty(molecule.product_of.annotations),
+    isConvergent: nonLeafReactants.length >= 2,
   })
 
-  molecule.synthesis_step.reactants.forEach((reactant, position) => {
-    const childRef = visitMolecule(state, reactant, depth + 1, undefined)
+  molecule.product_of.reactants.forEach((reactant, position) => {
+    const childPath = path ? `${path}/${position}` : `${position}`
+    const childRef = visitMolecule(state, reactant, depth + 1, childPath)
     state.stepInputs.push({
       routeStepRef: stepRef,
       routeNodeRef: childRef,
@@ -285,7 +314,7 @@ export function projectRetrocastRoute(
   assertRetrocastRoute(route)
 
   const computedSignature = computeMoleculeSubtreeSignature(route.target)
-  const signature = route.signature ?? computedSignature
+  const signature = computedSignature
   const state: MutableProjection = {
     molecules: new Map(),
     reactions: new Map(),
@@ -297,7 +326,7 @@ export function projectRetrocastRoute(
     stepCounter: 0,
   }
 
-  const rootNodeRef = visitMolecule(state, route.target, 0, signature)
+  const rootNodeRef = visitMolecule(state, route.target, 0, "")
 
   const records: RouteProjectionRecords = {
     molecules: Array.from(state.molecules.values()),
@@ -308,16 +337,12 @@ export function projectRetrocastRoute(
       computedSignature,
       rootMoleculeInchikey: route.target.inchikey,
       rootNodeRef,
-      length: route.length ?? computeRouteLength(route.target),
-      hasConvergentReaction:
-        route.has_convergent_reaction ?? hasConvergentReaction(route.target),
+      length: computeRouteLength(route.target),
+      hasConvergentReaction: hasConvergentReaction(route.target),
       source: {
         targetId: options.targetId,
-        rank: route.rank,
-        retrocastVersion: route.retrocast_version,
-        metadata: metadataOrEmpty(route.metadata),
-        sourceSignature: route.signature,
-        sourceContentHash: route.content_hash,
+        rank: options.rank,
+        annotations: annotationsOrEmpty(route.annotations),
       },
     },
     nodes: state.nodes,
@@ -355,7 +380,7 @@ export function retrocastRouteToInspectionTree(
   route: RetrocastRoute
 ): RouteInspectionNode {
   assertRetrocastRoute(route)
-  return createInspectionNode(route.target, 0, "node:0")
+  return createInspectionNode(route.target, 0, "rc:m:/")
 }
 
 export function routeProjectionToInspectionTree(
@@ -425,10 +450,19 @@ export function routeProjectionToInspectionTree(
   return visit(projection.route.rootNodeRef)
 }
 
-export function projectRetrocastRoutes(
-  routesByTarget: RetrocastRoutesByTarget
+export function projectRetrocastCandidates(
+  candidatesByTarget: RetrocastCandidatesByTarget
 ): RouteProjection[] {
-  return Object.entries(routesByTarget).flatMap(([targetId, routes]) =>
-    routes.map((route) => projectRetrocastRoute(route, { targetId }))
+  return Object.entries(candidatesByTarget).flatMap(([targetId, candidates]) =>
+    candidates.flatMap((candidate) =>
+      candidate.route
+        ? [
+            projectRetrocastRoute(candidate.route, {
+              targetId,
+              rank: candidate.rank,
+            }),
+          ]
+        : []
+    )
   )
 }
