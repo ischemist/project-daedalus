@@ -4,6 +4,16 @@ packages:
 
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
+overrides:
+  "@hono/node-server": 1.19.14
+  brace-expansion: 5.0.6
+  fast-uri: 3.1.2
+  hono: 4.12.21
+  ip-address: 10.1.1
+  kysely: 0.28.17
+  postcss: 8.5.15
+  qs: 6.15.2
+  uuid: 11.1.1
 # pnpm v11 requires explicit allowlisting for packages that install native binaries.
 allowBuilds:
   "@prisma/client": true
