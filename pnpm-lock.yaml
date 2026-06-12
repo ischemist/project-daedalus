@@ -68,7 +68,7 @@ importers:
         specifier: ^12.11.0
         version: 12.11.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(immer@11.1.8)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       better-auth:
-        specifier: ^1.6.13
+        specifier: 1.6.13
         version: 1.6.13(@prisma/client@7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3))(typescript@6.0.3))(mysql2@3.15.3)(next@16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(pg@8.21.0)(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       class-variance-authority:
         specifier: ^0.7.1
@@ -131,7 +131,7 @@ importers:
         specifier: ^4.10.0
         version: 4.10.0(@types/node@25.9.1)(typescript@6.0.3)
       smiles-drawer:
-        specifier: ^2.2.1
+        specifier: 2.2.1
         version: 2.2.1
       sonner:
         specifier: ^2.0.7
@@ -205,7 +205,7 @@ importers:
         specifier: '>=19'
         version: 19.2.7(react@19.2.7)
       smiles-drawer:
-        specifier: ^2.2.1
+        specifier: 2.2.1
         version: 2.2.1
     devDependencies:
       '@types/react':

@@ -34,7 +34,7 @@
     "@ischemist/routes": "workspace:^",
     "@xyflow/react": "^12.11.0",
     "lucide-react": "^1.17.0",
-    "smiles-drawer": "^2.2.1"
+    "smiles-drawer": "2.2.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.16",
