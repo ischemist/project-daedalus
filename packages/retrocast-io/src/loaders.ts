@@ -67,6 +67,58 @@ function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
   return value as BenchmarkDefinition
 }
 
+function assertTaskConstraints(value: unknown, label: string): void {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`)
+  }
+  value.forEach((constraint, index) => {
+    assertObject(constraint, `${label}[${index}]`)
+    if (typeof constraint.kind !== "string") {
+      throw new Error(`${label}[${index}].kind must be a string`)
+    }
+  })
+}
+
+function assertScoredCandidate(value: unknown, label: string): void {
+  assertObject(value, label)
+  if (typeof value.rank !== "number") {
+    throw new Error(`${label}.rank must be a number`)
+  }
+  if (
+    "matches_acceptable" in value &&
+    typeof value.matches_acceptable !== "boolean"
+  ) {
+    throw new Error(`${label}.matches_acceptable must be a boolean`)
+  }
+  if (
+    "matched_acceptable_index" in value &&
+    value.matched_acceptable_index !== null &&
+    typeof value.matched_acceptable_index !== "number"
+  ) {
+    throw new Error(
+      `${label}.matched_acceptable_index must be a number or null`
+    )
+  }
+}
+
+function assertTargetEvaluation(
+  value: unknown,
+  label: string
+): asserts value is RetrocastTargetEvaluation {
+  assertObject(value, label)
+  assertBenchmarkTarget(value.target, `${label}.target`)
+  assertTaskConstraints(
+    value.effective_constraints,
+    `${label}.effective_constraints`
+  )
+  if (!Array.isArray(value.candidates)) {
+    throw new Error(`${label}.candidates must be an array`)
+  }
+  value.candidates.forEach((candidate, index) => {
+    assertScoredCandidate(candidate, `${label}.candidates[${index}]`)
+  })
+}
+
 function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
   assertObject(value, "evaluation file")
   if (value.schema_version !== "2") {
@@ -74,6 +126,11 @@ function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
   }
   assertObject(value.task, "evaluation file task")
   assertObject(value.targets, "evaluation file targets")
+
+  for (const [targetId, targetResult] of Object.entries(value.targets)) {
+    assertTargetEvaluation(targetResult, `evaluation target ${targetId}`)
+  }
+
   return value as RetrocastEvaluationFile
 }
 

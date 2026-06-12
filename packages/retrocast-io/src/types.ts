@@ -50,7 +50,6 @@ export type BenchmarkDefinition = {
 }
 
 export type RetrocastScoredCandidate = RetrocastCandidate & {
-  rank: number
   validity?: JsonObject
   constraints?: JsonObject
   matches_acceptable?: boolean
@@ -129,7 +128,6 @@ export type RetrocastCheckpointBundle = {
 export type TargetAuditPrediction = {
   run: WorkspaceRunDescriptor
   candidates: RetrocastCandidate[]
-  routes: RetrocastRoute[]
   evaluation?: RetrocastTargetEvaluation
 }
 

@@ -31,6 +31,6 @@ import { loadRetrocastCandidatesGzip } from "@ischemist/routes/node"
 ## exports
 
 - `@ischemist/routes`: shared types, projection helpers, signature helpers, visualization helpers
-- `@ischemist/routes/projection`: retrocast candidate parsing and route projection
+- `@ischemist/routes/projection`: retrocast route validation and projection
 - `@ischemist/routes/visualization`: layout and graph builders
 - `@ischemist/routes/node`: node-only candidate json/gzip loaders

@@ -346,9 +346,6 @@ export async function loadTargetAuditBundle({
       return {
         run: descriptor,
         candidates,
-        routes: candidates.flatMap((candidate) =>
-          candidate.route ? [candidate.route] : []
-        ),
         evaluation: evaluationFile?.targets[targetId],
       }
     })
