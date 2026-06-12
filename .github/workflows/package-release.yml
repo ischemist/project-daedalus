@@ -17,7 +17,7 @@ permissions:
 jobs:
   release:
     name: Version or Publish Packages
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/daedalus?schema=public
       BETTER_AUTH_SECRET: ci-better-auth-secret-01234567890123456789

@@ -1,8 +1,8 @@
 # @ischemist/route-viewer
 
-## 0.0.10
+## 0.1.0
 
-### Patch Changes
+### Minor Changes
 
 - f78205a: upgrade retrocast artifact support to the v0.7 schema.
 
