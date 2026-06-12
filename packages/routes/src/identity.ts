@@ -1,6 +1,6 @@
 import type {
   RetrocastMolecule,
-  RetrocastReactionStep,
+  RetrocastReaction,
   RetrocastRoute,
 } from "./types.js"
 
@@ -92,48 +92,87 @@ export function sha256Hex(value: string): string {
   return hash.map((chunk) => chunk.toString(16).padStart(8, "0")).join("")
 }
 
+function normalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeJson)
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, normalizeJson(child)])
+    )
+  }
+
+  return value
+}
+
+export function hashJson(value: unknown): string {
+  return sha256Hex(JSON.stringify(normalizeJson(value)))
+}
+
+function moleculeKey(molecule: RetrocastMolecule): string {
+  return molecule.inchikey
+}
+
+export function reactionKey(
+  reaction: RetrocastReaction,
+  productInchikey: string
+): [string, string, string[]] {
+  return [
+    "rxn",
+    productInchikey,
+    reaction.reactants.map((reactant) => moleculeKey(reactant)).sort(),
+  ]
+}
+
 export function computeReactionSignature(
-  step: RetrocastReactionStep,
+  reaction: RetrocastReaction,
   productInchikey: string
 ): string {
-  const reactantInchikeys = step.reactants
-    .map((reactant) => reactant.inchikey)
+  return hashJson(reactionKey(reaction, productInchikey))
+}
+
+export function moleculeSubtreeKey(molecule: RetrocastMolecule): unknown[] {
+  if (!molecule.product_of) {
+    return ["mol", moleculeKey(molecule)]
+  }
+
+  const childSignatures = molecule.product_of.reactants
+    .map(computeMoleculeSubtreeSignature)
     .sort()
-  return sha256Hex(`${productInchikey}>>${reactantInchikeys.join(".")}`)
+
+  return [
+    "mol",
+    moleculeKey(molecule),
+    reactionKey(molecule.product_of, molecule.inchikey),
+    childSignatures,
+  ]
 }
 
 export function computeMoleculeSubtreeSignature(
   molecule: RetrocastMolecule
 ): string {
-  if (!molecule.synthesis_step) {
-    return molecule.inchikey
-  }
-
-  const childSignatures = molecule.synthesis_step.reactants
-    .map(computeMoleculeSubtreeSignature)
-    .sort()
-
-  return sha256Hex(`${childSignatures.join("")}>>${molecule.inchikey}`)
+  return hashJson(moleculeSubtreeKey(molecule))
 }
 
 export function computeRouteLength(root: RetrocastMolecule): number {
-  if (!root.synthesis_step) {
+  if (!root.product_of) {
     return 0
   }
 
-  return (
-    1 + Math.max(0, ...root.synthesis_step.reactants.map(computeRouteLength))
-  )
+  return 1 + Math.max(0, ...root.product_of.reactants.map(computeRouteLength))
 }
 
 export function countRouteSteps(root: RetrocastMolecule): number {
-  if (!root.synthesis_step) {
+  if (!root.product_of) {
     return 0
   }
 
   return (
     1 +
-    root.synthesis_step.reactants.reduce(
+    root.product_of.reactants.reduce(
       (total, reactant) => total + countRouteSteps(reactant),
       0
     )
@@ -144,20 +183,18 @@ export function computeRootReactionSignature(
   routeOrRoot: RetrocastRoute | RetrocastMolecule
 ): string | null {
   const root = "target" in routeOrRoot ? routeOrRoot.target : routeOrRoot
-  if (!root.synthesis_step) {
+  if (!root.product_of) {
     return null
   }
 
-  return computeReactionSignature(root.synthesis_step, root.inchikey)
+  return computeReactionSignature(root.product_of, root.inchikey)
 }
 
 export function getRootReactantInchikeys(
   routeOrRoot: RetrocastRoute | RetrocastMolecule
 ): string[] {
   const root = "target" in routeOrRoot ? routeOrRoot.target : routeOrRoot
-  return (
-    root.synthesis_step?.reactants.map((reactant) => reactant.inchikey) ?? []
-  )
+  return root.product_of?.reactants.map((reactant) => reactant.inchikey) ?? []
 }
 
 export function getRootProductInchikey(
@@ -168,17 +205,17 @@ export function getRootProductInchikey(
 }
 
 export function hasConvergentReaction(root: RetrocastMolecule): boolean {
-  if (!root.synthesis_step) {
+  if (!root.product_of) {
     return false
   }
 
-  const nonLeafReactants = root.synthesis_step.reactants.filter(
-    (reactant) => reactant.synthesis_step !== null
+  const nonLeafReactants = root.product_of.reactants.filter(
+    (reactant) => reactant.product_of != null
   )
 
   if (nonLeafReactants.length >= 2) {
     return true
   }
 
-  return root.synthesis_step.reactants.some(hasConvergentReaction)
+  return root.product_of.reactants.some(hasConvergentReaction)
 }

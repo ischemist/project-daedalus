@@ -15,8 +15,8 @@ const bundle = await loadCheckpointBundle(run)
 supported artifacts:
 
 - benchmark definitions under `data/retrocast/1-benchmarks/definitions`
-- processed `routes.json(.gz)`
+- processed `candidates.json(.gz)`
 - scored `evaluation.json(.gz)`
-- result `statistics.json(.gz)`
+- result `analysis.json(.gz)`
 - `manifest.json`
 - optional `ariadne_metadata.json`

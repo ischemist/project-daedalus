@@ -9,10 +9,10 @@ loadEnv({ path: resolve(scriptDir, "../../../.env") })
 type Options = {
   file: string
   limitTargets: number
-  maxRoutesPerTarget: number
+  maxCandidatesPerTarget: number
 }
 
-const defaultFile = process.env.SAMPLE_ROUTES_FILE ?? ""
+const defaultFile = process.env.SAMPLE_CANDIDATES_FILE ?? ""
 
 function parsePositiveInteger(value: string, label: string): number {
   const parsed = Number.parseInt(value, 10)
@@ -27,7 +27,7 @@ function parseOptions(argv: string[]): Options {
   const options: Options = {
     file: defaultFile,
     limitTargets: 12,
-    maxRoutesPerTarget: 3,
+    maxCandidatesPerTarget: 3,
   }
 
   for (const arg of argv) {
@@ -48,10 +48,10 @@ function parseOptions(argv: string[]): Options {
       continue
     }
 
-    if (arg.startsWith("--max-routes-per-target=")) {
-      options.maxRoutesPerTarget = parsePositiveInteger(
-        arg.slice("--max-routes-per-target=".length),
-        "--max-routes-per-target"
+    if (arg.startsWith("--max-candidates-per-target=")) {
+      options.maxCandidatesPerTarget = parsePositiveInteger(
+        arg.slice("--max-candidates-per-target=".length),
+        "--max-candidates-per-target"
       )
       continue
     }
@@ -66,12 +66,12 @@ async function main() {
   const options = parseOptions(process.argv.slice(2))
   if (!options.file) {
     throw new Error(
-      "missing routes file: pass --file=/path/to/routes.json.gz or set SAMPLE_ROUTES_FILE"
+      "missing candidates file: pass --file=/path/to/candidates.json.gz or set SAMPLE_CANDIDATES_FILE"
     )
   }
 
   const [
-    { loadRetrocastRoutesGzip },
+    { loadRetrocastCandidatesGzip },
     { projectRetrocastRoute },
     { persistRouteProjection },
     { prisma },
@@ -82,8 +82,8 @@ async function main() {
     import("../src/lib/db"),
   ])
 
-  const routesByTarget = await loadRetrocastRoutesGzip(options.file)
-  const targetEntries = Object.entries(routesByTarget).slice(
+  const candidatesByTarget = await loadRetrocastCandidatesGzip(options.file)
+  const targetEntries = Object.entries(candidatesByTarget).slice(
     0,
     options.limitTargets
   )
@@ -91,9 +91,18 @@ async function main() {
   let reusedRoutes = 0
   let processedRoutes = 0
 
-  for (const [targetId, routes] of targetEntries) {
-    for (const route of routes.slice(0, options.maxRoutesPerTarget)) {
-      const projection = projectRetrocastRoute(route, { targetId })
+  for (const [targetId, candidates] of targetEntries) {
+    for (const candidate of candidates.slice(
+      0,
+      options.maxCandidatesPerTarget
+    )) {
+      if (!candidate.route) {
+        continue
+      }
+      const projection = projectRetrocastRoute(candidate.route, {
+        targetId,
+        rank: candidate.rank,
+      })
       const result = await persistRouteProjection(projection)
 
       processedRoutes += 1
