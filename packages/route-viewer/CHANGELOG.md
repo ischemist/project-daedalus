@@ -1,5 +1,11 @@
 # @ischemist/route-viewer
 
+## 0.1.1
+
+### Patch Changes
+
+- c64fa72: Show vendor and price badges for in-stock leaf molecules when buyable metadata is provided.
+
 ## 0.1.0
 
 ### Minor Changes
