@@ -30,18 +30,23 @@ const statusStyles: Record<string, React.CSSProperties> = {
   "overlay-one": { borderColor: "#f59e0b", borderWidth: 1.5 },
 }
 
-const vendorNames: Record<VendorSource, string> = {
-  MCULE: "mcule",
-  LABNETWORK: "labnetwork",
-  EMOLECULES: "emolecules",
-  SIGMA_ALDRICH: "sigma aldrich",
-  CHEMBRIDGE: "chembridge",
-  MC: "mcule",
-  LN: "labnetwork",
-  EM: "emolecules",
-  SA: "sigma aldrich",
-  CB: "chembridge",
+type VendorDisplay = {
+  compact: string
+  full: string
 }
+
+const vendorDisplays = {
+  MCULE: { compact: "Mcule", full: "Mcule" },
+  LABNETWORK: { compact: "LabNet", full: "LabNetwork" },
+  EMOLECULES: { compact: "eMols", full: "eMolecules" },
+  SIGMA_ALDRICH: { compact: "SigmAld", full: "Sigma-Aldrich" },
+  CHEMBRIDGE: { compact: "ChemBridge", full: "ChemBridge" },
+  MC: { compact: "Mcule", full: "Mcule" },
+  LN: { compact: "LabNet", full: "LabNetwork" },
+  EM: { compact: "eMols", full: "eMolecules" },
+  SA: { compact: "SigmAld", full: "Sigma-Aldrich" },
+  CB: { compact: "ChemBridge", full: "ChemBridge" },
+} satisfies Record<VendorSource, VendorDisplay>
 
 const badgeStyles = {
   neutral: {
@@ -72,6 +77,225 @@ function formatPrice(ppg: number) {
   if (ppg < 1000) return `$${ppg.toFixed(0)}/g`
   if (ppg < 10000) return `$${(ppg / 1000).toFixed(1)}k/g`
   return `$${Math.round(ppg / 1000)}k/g`
+}
+
+function priceBadgeStyle(ppg: number): React.CSSProperties {
+  if (ppg < 10) {
+    return badgeStyles.success
+  }
+  if (ppg < 100) {
+    return {
+      background: "rgb(59 130 246 / 0.13)",
+      border: "1px solid rgb(59 130 246 / 0.3)",
+      color: "#1d4ed8",
+    }
+  }
+  if (ppg < 1000) {
+    return badgeStyles.warning
+  }
+  if (ppg < 10000) {
+    return {
+      background: "rgb(249 115 22 / 0.16)",
+      border: "1px solid rgb(249 115 22 / 0.34)",
+      color: "#c2410c",
+    }
+  }
+  return badgeStyles.danger
+}
+
+const vendorBadgeStyle = {
+  background: "rgb(100 116 139 / 0.12)",
+  border: "1px solid rgb(100 116 139 / 0.24)",
+  color: "#475569",
+} satisfies React.CSSProperties
+
+function getVendorDisplay(source: VendorSource | string): VendorDisplay {
+  return (
+    (vendorDisplays as Partial<Record<string, VendorDisplay>>)[source] ?? {
+      compact: source,
+      full: source,
+    }
+  )
+}
+
+function StockMetadataBadge({
+  children,
+  label,
+  style,
+}: {
+  children: React.ReactNode
+  label: string
+  style: React.CSSProperties
+}) {
+  return (
+    <span
+      title={label}
+      style={{
+        ...style,
+        borderRadius: 999,
+        display: "inline-block",
+        fontSize: 11,
+        fontWeight: 700,
+        lineHeight: 1,
+        maxWidth: 72,
+        overflow: "hidden",
+        padding: "3px 6px",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
+function BuyableInfo({
+  source,
+  ppg,
+  leadTime,
+  link,
+}: {
+  source?: VendorSource | null
+  ppg?: number | null
+  leadTime?: string | null
+  link?: string | null
+}) {
+  if (source == null || ppg == null) return null
+
+  const vendor = getVendorDisplay(source)
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid rgb(148 163 184 / 0.3)",
+        paddingTop: 10,
+      }}
+    >
+      <div
+        style={{
+          color: "#64748b",
+          fontWeight: 700,
+          marginBottom: 6,
+        }}
+      >
+        buyable information
+      </div>
+      <div style={{ display: "grid", gap: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ color: "#64748b" }}>vendor</span>
+          <span>{vendor.full}</span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ color: "#64748b" }}>price</span>
+          <span>{formatPrice(ppg)}</span>
+        </div>
+        {leadTime ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span style={{ color: "#64748b" }}>lead time</span>
+            <span>{leadTime}</span>
+          </div>
+        ) : null}
+        {link ? (
+          <a href={link} rel="noreferrer" target="_blank">
+            vendor page
+          </a>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function BuyableStockBadges({
+  source,
+  ppg,
+}: {
+  source?: VendorSource | null
+  ppg?: number | null
+}) {
+  if (source == null || ppg == null) return null
+
+  const vendor = getVendorDisplay(source)
+  const price = formatPrice(ppg)
+
+  return (
+    <div
+      style={{
+        alignItems: "center",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 4,
+        justifyContent: "center",
+        marginTop: 4,
+        maxWidth: "100%",
+      }}
+    >
+      <StockMetadataBadge label={vendor.full} style={vendorBadgeStyle}>
+        {vendor.compact}
+      </StockMetadataBadge>
+      <StockMetadataBadge label={`price ${price}`} style={priceBadgeStyle(ppg)}>
+        {price}
+      </StockMetadataBadge>
+    </div>
+  )
+}
+
+function StockAvailabilityBadge({ inStock }: { inStock: boolean }) {
+  return (
+    <span
+      style={{
+        alignItems: "center",
+        background: inStock
+          ? "rgb(16 185 129 / 0.14)"
+          : "rgb(107 114 128 / 0.14)",
+        borderRadius: 6,
+        color: inStock ? "#047857" : "#4b5563",
+        display: "inline-flex",
+        fontSize: 12,
+        fontWeight: 600,
+        gap: 4,
+        marginTop: 4,
+        padding: "2px 6px",
+      }}
+    >
+      <PackageIcon size={12} />
+      {inStock ? "in stock" : "not in stock"}
+    </span>
+  )
+}
+
+function MoleculeStockBadge({
+  inStock,
+  ppg,
+  showBuyable,
+  showStock,
+  source,
+}: {
+  inStock: boolean
+  ppg?: number | null
+  showBuyable: boolean
+  showStock: boolean
+  source?: VendorSource | null
+}) {
+  if (showBuyable) {
+    return <BuyableStockBadges source={source} ppg={ppg} />
+  }
+  if (!showStock) return null
+  return <StockAvailabilityBadge inStock={inStock} />
 }
 
 function IconButton({
@@ -107,8 +331,17 @@ function IconButton({
 }
 
 export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
-  const { smiles, inchikey, status, inStock, ppg, source, leadTime, link } =
-    data
+  const {
+    smiles,
+    inchikey,
+    status,
+    inStock,
+    isLeaf,
+    ppg,
+    source,
+    leadTime,
+    link,
+  } = data
   const [copiedField, setCopiedField] = useState<"smiles" | "inchikey" | null>(
     null
   )
@@ -140,7 +373,8 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
     status === "overlay-some" ||
     status === "overlay-one" ||
     inStock === true
-  const hasBuyableData = source != null && ppg != null
+  const showBuyableBadges =
+    inStock === true && isLeaf === true && source != null && ppg != null
   const routeCount =
     typeof data.routeCount === "number" ? data.routeCount : undefined
   const routeTotal =
@@ -298,60 +532,12 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
                   {inchikey}
                 </div>
               </div>
-              {hasBuyableData ? (
-                <div
-                  style={{
-                    borderTop: "1px solid rgb(148 163 184 / 0.3)",
-                    paddingTop: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#64748b",
-                      fontWeight: 700,
-                      marginBottom: 6,
-                    }}
-                  >
-                    buyable information
-                  </div>
-                  <div style={{ display: "grid", gap: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span style={{ color: "#64748b" }}>vendor</span>
-                      <span>{vendorNames[source]}</span>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span style={{ color: "#64748b" }}>price</span>
-                      <span>{formatPrice(ppg)}</span>
-                    </div>
-                    {leadTime ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <span style={{ color: "#64748b" }}>lead time</span>
-                        <span>{leadTime}</span>
-                      </div>
-                    ) : null}
-                    {link ? (
-                      <a href={link} rel="noreferrer" target="_blank">
-                        vendor page
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+              <BuyableInfo
+                source={source}
+                ppg={ppg}
+                leadTime={leadTime}
+                link={link}
+              />
             </div>
           </div>
         </div>
@@ -365,27 +551,13 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
         }}
       >
         <MoleculeSvg smiles={smiles} />
-        {showStockBadge ? (
-          <span
-            style={{
-              alignItems: "center",
-              background: inStock
-                ? "rgb(16 185 129 / 0.14)"
-                : "rgb(107 114 128 / 0.14)",
-              borderRadius: 6,
-              color: inStock ? "#047857" : "#4b5563",
-              display: "inline-flex",
-              fontSize: 12,
-              fontWeight: 600,
-              gap: 4,
-              marginTop: 4,
-              padding: "2px 6px",
-            }}
-          >
-            <PackageIcon size={12} />
-            {inStock ? "in stock" : "not in stock"}
-          </span>
-        ) : null}
+        <MoleculeStockBadge
+          inStock={inStock === true}
+          ppg={ppg}
+          showBuyable={showBuyableBadges}
+          showStock={showStockBadge}
+          source={source}
+        />
         {badges.length > 0 ? (
           <div
             style={{
