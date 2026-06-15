@@ -43,6 +43,19 @@ const vendorNames: Record<VendorSource, string> = {
   CB: "chembridge",
 }
 
+const vendorCodes: Record<VendorSource, string> = {
+  MCULE: "Mcule",
+  LABNETWORK: "LabNet",
+  EMOLECULES: "eMols",
+  SIGMA_ALDRICH: "SigmAld",
+  CHEMBRIDGE: "ChemBridge",
+  MC: "Mcule",
+  LN: "LabNet",
+  EM: "eMols",
+  SA: "SigmAld",
+  CB: "ChemBridge",
+}
+
 const badgeStyles = {
   neutral: {
     background: "rgb(100 116 139 / 0.14)",
@@ -72,6 +85,78 @@ function formatPrice(ppg: number) {
   if (ppg < 1000) return `$${ppg.toFixed(0)}/g`
   if (ppg < 10000) return `$${(ppg / 1000).toFixed(1)}k/g`
   return `$${Math.round(ppg / 1000)}k/g`
+}
+
+function priceBadgeStyle(ppg: number): React.CSSProperties {
+  if (ppg < 10) {
+    return {
+      background: "rgb(16 185 129 / 0.14)",
+      border: "1px solid rgb(16 185 129 / 0.3)",
+      color: "#047857",
+    }
+  }
+  if (ppg < 100) {
+    return {
+      background: "rgb(59 130 246 / 0.13)",
+      border: "1px solid rgb(59 130 246 / 0.3)",
+      color: "#1d4ed8",
+    }
+  }
+  if (ppg < 1000) {
+    return {
+      background: "rgb(245 158 11 / 0.16)",
+      border: "1px solid rgb(245 158 11 / 0.34)",
+      color: "#92400e",
+    }
+  }
+  if (ppg < 10000) {
+    return {
+      background: "rgb(249 115 22 / 0.16)",
+      border: "1px solid rgb(249 115 22 / 0.34)",
+      color: "#c2410c",
+    }
+  }
+  return {
+    background: "rgb(239 68 68 / 0.13)",
+    border: "1px solid rgb(239 68 68 / 0.3)",
+    color: "#b91c1c",
+  }
+}
+
+const vendorBadgeStyle = {
+  background: "rgb(100 116 139 / 0.12)",
+  border: "1px solid rgb(100 116 139 / 0.24)",
+  color: "#475569",
+} satisfies React.CSSProperties
+
+function StockMetadataBadge({
+  children,
+  label,
+  style,
+}: {
+  children: React.ReactNode
+  label: string
+  style: React.CSSProperties
+}) {
+  return (
+    <span
+      title={label}
+      style={{
+        ...style,
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 700,
+        lineHeight: 1,
+        maxWidth: 72,
+        overflow: "hidden",
+        padding: "3px 6px",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  )
 }
 
 function IconButton({
@@ -107,8 +192,17 @@ function IconButton({
 }
 
 export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
-  const { smiles, inchikey, status, inStock, ppg, source, leadTime, link } =
-    data
+  const {
+    smiles,
+    inchikey,
+    status,
+    inStock,
+    isLeaf,
+    ppg,
+    source,
+    leadTime,
+    link,
+  } = data
   const [copiedField, setCopiedField] = useState<"smiles" | "inchikey" | null>(
     null
   )
@@ -141,6 +235,8 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
     status === "overlay-one" ||
     inStock === true
   const hasBuyableData = source != null && ppg != null
+  const showBuyableBadges =
+    inStock === true && isLeaf === true && hasBuyableData
   const routeCount =
     typeof data.routeCount === "number" ? data.routeCount : undefined
   const routeTotal =
@@ -365,7 +461,32 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
         }}
       >
         <MoleculeSvg smiles={smiles} />
-        {showStockBadge ? (
+        {showBuyableBadges ? (
+          <div
+            style={{
+              alignItems: "center",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+              justifyContent: "center",
+              marginTop: 4,
+              maxWidth: "100%",
+            }}
+          >
+            <StockMetadataBadge
+              label={vendorNames[source]}
+              style={vendorBadgeStyle}
+            >
+              {vendorCodes[source]}
+            </StockMetadataBadge>
+            <StockMetadataBadge
+              label={`price ${formatPrice(ppg)}`}
+              style={priceBadgeStyle(ppg)}
+            >
+              {formatPrice(ppg)}
+            </StockMetadataBadge>
+          </div>
+        ) : showStockBadge ? (
           <span
             style={{
               alignItems: "center",
