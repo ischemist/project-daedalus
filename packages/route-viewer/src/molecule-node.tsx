@@ -35,13 +35,6 @@ type VendorDisplay = {
   full: string
 }
 
-type BuyableData = {
-  source: VendorSource | string
-  ppg: number
-  leadTime?: string | null
-  link?: string | null
-}
-
 const vendorDisplays = {
   MCULE: { compact: "Mcule", full: "Mcule" },
   LABNETWORK: { compact: "LabNet", full: "LabNetwork" },
@@ -125,21 +118,6 @@ function getVendorDisplay(source: VendorSource | string): VendorDisplay {
   )
 }
 
-function getBuyableData({
-  source,
-  ppg,
-  leadTime,
-  link,
-}: {
-  source?: VendorSource | null
-  ppg?: number | null
-  leadTime?: string | null
-  link?: string | null
-}): BuyableData | null {
-  if (source == null || ppg == null) return null
-  return { source, ppg, leadTime, link }
-}
-
 function StockMetadataBadge({
   children,
   label,
@@ -171,8 +149,20 @@ function StockMetadataBadge({
   )
 }
 
-function BuyableInfo({ buyable }: { buyable: BuyableData }) {
-  const vendor = getVendorDisplay(buyable.source)
+function BuyableInfo({
+  source,
+  ppg,
+  leadTime,
+  link,
+}: {
+  source?: VendorSource | null
+  ppg?: number | null
+  leadTime?: string | null
+  link?: string | null
+}) {
+  if (source == null || ppg == null) return null
+
+  const vendor = getVendorDisplay(source)
 
   return (
     <div
@@ -207,9 +197,9 @@ function BuyableInfo({ buyable }: { buyable: BuyableData }) {
           }}
         >
           <span style={{ color: "#64748b" }}>price</span>
-          <span>{formatPrice(buyable.ppg)}</span>
+          <span>{formatPrice(ppg)}</span>
         </div>
-        {buyable.leadTime ? (
+        {leadTime ? (
           <div
             style={{
               display: "flex",
@@ -217,11 +207,11 @@ function BuyableInfo({ buyable }: { buyable: BuyableData }) {
             }}
           >
             <span style={{ color: "#64748b" }}>lead time</span>
-            <span>{buyable.leadTime}</span>
+            <span>{leadTime}</span>
           </div>
         ) : null}
-        {buyable.link ? (
-          <a href={buyable.link} rel="noreferrer" target="_blank">
+        {link ? (
+          <a href={link} rel="noreferrer" target="_blank">
             vendor page
           </a>
         ) : null}
@@ -230,9 +220,17 @@ function BuyableInfo({ buyable }: { buyable: BuyableData }) {
   )
 }
 
-function BuyableStockBadges({ buyable }: { buyable: BuyableData }) {
-  const vendor = getVendorDisplay(buyable.source)
-  const price = formatPrice(buyable.ppg)
+function BuyableStockBadges({
+  source,
+  ppg,
+}: {
+  source?: VendorSource | null
+  ppg?: number | null
+}) {
+  if (source == null || ppg == null) return null
+
+  const vendor = getVendorDisplay(source)
+  const price = formatPrice(ppg)
 
   return (
     <div
@@ -249,10 +247,7 @@ function BuyableStockBadges({ buyable }: { buyable: BuyableData }) {
       <StockMetadataBadge label={vendor.full} style={vendorBadgeStyle}>
         {vendor.compact}
       </StockMetadataBadge>
-      <StockMetadataBadge
-        label={`price ${price}`}
-        style={priceBadgeStyle(buyable.ppg)}
-      >
+      <StockMetadataBadge label={`price ${price}`} style={priceBadgeStyle(ppg)}>
         {price}
       </StockMetadataBadge>
     </div>
@@ -284,18 +279,20 @@ function StockAvailabilityBadge({ inStock }: { inStock: boolean }) {
 }
 
 function MoleculeStockBadge({
-  buyable,
   inStock,
+  ppg,
   showBuyable,
   showStock,
+  source,
 }: {
-  buyable: BuyableData | null
   inStock: boolean
+  ppg?: number | null
   showBuyable: boolean
   showStock: boolean
+  source?: VendorSource | null
 }) {
-  if (showBuyable && buyable) {
-    return <BuyableStockBadges buyable={buyable} />
+  if (showBuyable) {
+    return <BuyableStockBadges source={source} ppg={ppg} />
   }
   if (!showStock) return null
   return <StockAvailabilityBadge inStock={inStock} />
@@ -376,9 +373,8 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
     status === "overlay-some" ||
     status === "overlay-one" ||
     inStock === true
-  const buyable = getBuyableData({ source, ppg, leadTime, link })
   const showBuyableBadges =
-    inStock === true && isLeaf === true && buyable != null
+    inStock === true && isLeaf === true && source != null && ppg != null
   const routeCount =
     typeof data.routeCount === "number" ? data.routeCount : undefined
   const routeTotal =
@@ -536,7 +532,12 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
                   {inchikey}
                 </div>
               </div>
-              {buyable ? <BuyableInfo buyable={buyable} /> : null}
+              <BuyableInfo
+                source={source}
+                ppg={ppg}
+                leadTime={leadTime}
+                link={link}
+              />
             </div>
           </div>
         </div>
@@ -551,10 +552,11 @@ export function MoleculeNode({ data }: NodeProps<Node<RouteGraphNode>>) {
       >
         <MoleculeSvg smiles={smiles} />
         <MoleculeStockBadge
-          buyable={buyable}
           inStock={inStock === true}
+          ppg={ppg}
           showBuyable={showBuyableBadges}
           showStock={showStockBadge}
+          source={source}
         />
         {badges.length > 0 ? (
           <div
