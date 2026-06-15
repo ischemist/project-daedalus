@@ -109,13 +109,8 @@ const vendorBadgeStyle = {
   color: "#475569",
 } satisfies React.CSSProperties
 
-function getVendorDisplay(source: VendorSource | string): VendorDisplay {
-  return (
-    (vendorDisplays as Partial<Record<string, VendorDisplay>>)[source] ?? {
-      compact: source,
-      full: source,
-    }
-  )
+function getVendorDisplay(source: VendorSource): VendorDisplay {
+  return vendorDisplays[source]
 }
 
 function StockMetadataBadge({
