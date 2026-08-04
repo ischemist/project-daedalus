@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check-types": "tsc -p tsconfig.json --noEmit"
+    "check-types": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm --filter @ischemist/routes build && pnpm run build && node --test test/*.test.mjs"
   },
   "repository": {
     "type": "git",

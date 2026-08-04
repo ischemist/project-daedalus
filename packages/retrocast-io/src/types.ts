@@ -1,7 +1,8 @@
 import type {
+  JsonObject,
   RetrocastCandidate,
   RetrocastCandidatesByTarget,
-  JsonObject,
+  RetrocastFailureRecord,
   RetrocastRoute,
 } from "@ischemist/routes"
 
@@ -32,88 +33,209 @@ export type BenchmarkTargetDefinition = {
   id: string
   smiles: string
   inchikey: string
-  annotations?: JsonObject
+  annotations: JsonObject
   acceptable_routes: RetrocastRoute[]
-  [key: string]: unknown
 }
 
 export type BenchmarkDefinition = {
   name: string
   description?: string
   targets: Record<string, BenchmarkTargetDefinition>
-  default_constraints?: RetrocastTaskConstraint[]
-  constraints?: Record<string, RetrocastTaskConstraint[]>
-  metric_label?: string | null
-  annotations?: JsonObject
+  default_constraints: RetrocastTaskConstraint[]
+  constraints: Record<string, RetrocastTaskConstraint[]>
+  metric_label: string | null
+  annotations: JsonObject
   schema_version: "2"
-  [key: string]: unknown
 }
 
-export type RetrocastScoredCandidate = RetrocastCandidate & {
-  validity?: JsonObject
-  constraints?: JsonObject
-  matches_acceptable?: boolean
-  matched_acceptable_index?: number | null
-  [key: string]: unknown
+export const RETROCAST_TIERS = [0, 1, 2, 3] as const
+export type RetrocastTier = (typeof RETROCAST_TIERS)[number]
+
+export const RETROCAST_CHECK_STATUSES = [
+  "pass",
+  "fail",
+  "not_evaluated",
+] as const
+export type RetrocastCheckStatus = (typeof RETROCAST_CHECK_STATUSES)[number]
+
+export type RetrocastCheckResult = {
+  code: string
+  status: RetrocastCheckStatus
+  message: string | null
+  details: JsonObject
 }
+
+export type RetrocastTierResult = {
+  status: RetrocastCheckStatus
+  checks: RetrocastCheckResult[]
+}
+
+export type RetrocastReactionValidity = {
+  reaction_id: string
+  tiers: Partial<Record<`${RetrocastTier}`, RetrocastTierResult>>
+}
+
+export type RetrocastRouteValidity = {
+  tiers: Partial<Record<`${RetrocastTier}`, RetrocastTierResult>>
+  reactions: RetrocastReactionValidity[]
+}
+
+export type RetrocastConstraintResult = {
+  status: RetrocastCheckStatus
+  checks: RetrocastCheckResult[]
+}
+
+type RetrocastScoredCandidateFields = {
+  rank: number
+  validity: RetrocastRouteValidity
+  constraints: RetrocastConstraintResult
+  matches_acceptable: boolean
+  matched_acceptable_index: number | null
+}
+
+export type RetrocastScoredRouteCandidate = RetrocastScoredCandidateFields & {
+  route: RetrocastRoute
+  failure?: null
+}
+
+export type RetrocastScoredFailureCandidate = RetrocastScoredCandidateFields & {
+  route?: null
+  failure: RetrocastFailureRecord
+}
+
+export type RetrocastScoredCandidate =
+  | RetrocastScoredRouteCandidate
+  | RetrocastScoredFailureCandidate
 
 export type RetrocastTargetEvaluation = {
   target: BenchmarkTargetDefinition
   effective_constraints: RetrocastTaskConstraint[]
   candidates: RetrocastScoredCandidate[]
-  wall_time?: number | null
-  cpu_time?: number | null
-  [key: string]: unknown
+  wall_time: number | null
+  cpu_time: number | null
 }
 
 export type RetrocastEvaluationFile = {
   task: BenchmarkDefinition
-  tiers: number[]
+  tiers: RetrocastTier[]
   metric_label: string
-  acceptable_match_level: string
+  acceptable_match_level: "full" | "no_stereo" | "connectivity"
   acceptable_route_match: "prefix" | "exact"
   targets: Record<string, RetrocastTargetEvaluation>
   schema_version: "2"
-  [key: string]: unknown
 }
 
+export const RETROCAST_RELIABILITY_CODES = ["OK", "LOW_N", "EXTREME_P"] as const
+export type RetrocastReliabilityCode =
+  (typeof RETROCAST_RELIABILITY_CODES)[number]
+
 export type MetricReliability = {
-  code: string
+  code: RetrocastReliabilityCode
   message: string
 }
 
 export type MetricEstimate = {
   value: number
   count: number
-  ci_low?: number | null
-  ci_high?: number | null
-  reliability?: MetricReliability
-  [key: string]: unknown
+  ci_low: number | null
+  ci_high: number | null
+  reliability: MetricReliability | null
 }
+
+export type RetrocastRuntimeSummary = {
+  total_wall_time: number | null
+  mean_wall_time: number | null
+  total_cpu_time: number | null
+  mean_cpu_time: number | null
+  timed_target_count: number
+}
+
+export type RetrocastMetricStatistic = "rate" | "mrr"
+export type TierValidityMetricKey =
+  `tier_${RetrocastTier}_validity_${RetrocastMetricStatistic}`
+export type SolvMetricKey =
+  `solv_${RetrocastTier}[${string}]_${RetrocastMetricStatistic}`
 
 export type RetrocastAnalysisFile = {
   schema_version: "2"
   metrics: Record<string, MetricEstimate>
-  by_stratum?: Record<string, Record<string, MetricEstimate>>
-  bootstrap_resamples?: number | null
-  runtime?: JsonObject
-  [key: string]: unknown
+  by_stratum: Record<string, Record<string, MetricEstimate>>
+  bootstrap_resamples: number | null
+  runtime: RetrocastRuntimeSummary
+}
+
+export type RetrocastManifestFileInfo = {
+  label: string | null
+  path: string
+  sha256: string
+  content_hash: string | null
 }
 
 export type RetrocastManifestFile = {
-  schema_version?: string
-  retrocast_version?: string
-  created_at?: string
-  action?: string
-  parameters?: JsonObject
-  directives?: JsonObject
-  release_name?: string | null
-  source_files?: JsonObject[]
-  output_files?: JsonObject[]
-  statistics?: JsonObject
-  summary?: JsonObject
+  schema_version: "2"
+  retrocast_version: string
+  created_at: string
+  action: string
+  parameters: JsonObject
+  directives: JsonObject
+  release_name: string | null
+  source_files: RetrocastManifestFileInfo[]
+  output_files:
+    | RetrocastManifestFileInfo[]
+    | Record<string, RetrocastManifestFileInfo>
+  statistics: JsonObject
+  summary: JsonObject
   [key: string]: unknown
 }
+
+export type EvaluationBundleFiles = {
+  candidates: string
+  evaluation: string
+  analysis: string
+  evaluationRun: string
+  manifest: string
+}
+
+export type ArtifactVerificationPolicy = "outputs" | "outputs-and-sources"
+
+export type LoadEvaluationBundleOptions = {
+  verification?: ArtifactVerificationPolicy
+}
+
+export type EvaluationBundleVerification = {
+  policy: ArtifactVerificationPolicy
+  outputFiles: string[]
+  sourceFiles: string[]
+}
+
+export type VerifiedEvaluationBundle = {
+  rootDir: string
+  manifestSha256: string
+  verification: EvaluationBundleVerification
+  files: EvaluationBundleFiles
+  manifest: RetrocastManifestFile
+  candidatesByTarget: RetrocastCandidatesByTarget
+  evaluation: RetrocastEvaluationFile
+  analysis: RetrocastAnalysisFile
+  evaluationRun: JsonObject
+}
+
+export type ParsedTierValidityMetricKey = {
+  family: "tier-validity"
+  tier: RetrocastTier
+  statistic: RetrocastMetricStatistic
+}
+
+export type ParsedSolvMetricKey = {
+  family: "solv"
+  tier: RetrocastTier
+  label: string
+  statistic: RetrocastMetricStatistic
+}
+
+export type ParsedCanonicalMetricKey =
+  | ParsedTierValidityMetricKey
+  | ParsedSolvMetricKey
 
 export type RetrocastCheckpointBundle = {
   descriptor: WorkspaceRunDescriptor

@@ -1,4 +1,7 @@
 export * from "./types.js"
 export * from "./files.js"
+export * from "./parsers.js"
+export * from "./metrics.js"
+export * from "./bundle.js"
 export * from "./loaders.js"
 export * from "./workspace.js"

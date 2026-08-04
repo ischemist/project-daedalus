@@ -28,6 +28,10 @@ node-only helpers for local retrocast candidate artifacts are available from the
 import { loadRetrocastCandidatesGzip } from "@ischemist/routes/node"
 ```
 
+RetroCast candidates are represented as an exclusive union: every ranked slot
+contains exactly one route or one failure record. Parsing rejects missing,
+ambiguous, duplicate-rank, and malformed candidate slots.
+
 ## exports
 
 - `@ischemist/routes`: shared types, projection helpers, signature helpers, visualization helpers

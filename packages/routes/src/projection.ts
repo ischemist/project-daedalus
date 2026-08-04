@@ -7,6 +7,7 @@ import {
 import type {
   RetrocastCandidate,
   RetrocastCandidatesByTarget,
+  RetrocastFailureCandidate,
   JsonObject,
   ProjectedMolecule,
   ProjectedReaction,
@@ -15,7 +16,9 @@ import type {
   ProjectedRouteStep,
   ProjectedRouteStepInput,
   RetrocastMolecule,
+  RetrocastReaction,
   RetrocastRoute,
+  RetrocastRouteCandidate,
   RouteProjection,
   RouteProjectionRecords,
   RouteInspectionNode,
@@ -46,7 +49,7 @@ function assertRetrocastMolecule(
   value: unknown,
   path: string
 ): asserts value is RetrocastMolecule {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${path} must be an object`)
   }
 
@@ -57,10 +60,46 @@ function assertRetrocastMolecule(
   if (typeof molecule.inchikey !== "string") {
     throw new Error(`${path}.inchikey must be a string`)
   }
+  if (
+    molecule.annotations !== undefined &&
+    (typeof molecule.annotations !== "object" ||
+      Array.isArray(molecule.annotations))
+  ) {
+    throw new Error(`${path}.annotations must be a json object`)
+  }
   if (molecule.product_of != null) {
-    const reaction = molecule.product_of as Partial<{ reactants: unknown }>
+    if (
+      typeof molecule.product_of !== "object" ||
+      Array.isArray(molecule.product_of)
+    ) {
+      throw new Error(`${path}.product_of must be an object or null`)
+    }
+    const reaction = molecule.product_of as Partial<RetrocastReaction>
     if (!Array.isArray(reaction.reactants)) {
       throw new Error(`${path}.product_of.reactants must be an array`)
+    }
+    for (const field of ["mapped_reaction_smiles", "template"] as const) {
+      if (reaction[field] != null && typeof reaction[field] !== "string") {
+        throw new Error(`${path}.product_of.${field} must be a string or null`)
+      }
+    }
+    for (const field of ["reagents", "solvents"] as const) {
+      if (
+        reaction[field] != null &&
+        (!Array.isArray(reaction[field]) ||
+          reaction[field].some((item) => typeof item !== "string"))
+      ) {
+        throw new Error(
+          `${path}.product_of.${field} must be an array of strings or null`
+        )
+      }
+    }
+    if (
+      reaction.annotations !== undefined &&
+      (typeof reaction.annotations !== "object" ||
+        Array.isArray(reaction.annotations))
+    ) {
+      throw new Error(`${path}.product_of.annotations must be a json object`)
     }
     reaction.reactants.forEach((reactant, index) => {
       assertRetrocastMolecule(
@@ -84,19 +123,67 @@ export function assertRetrocastRoute(
   if (route.schema_version !== "2") {
     throw new Error(`${path}.schema_version must be "2"`)
   }
+  if (
+    route.annotations !== undefined &&
+    (typeof route.annotations !== "object" || Array.isArray(route.annotations))
+  ) {
+    throw new Error(`${path}.annotations must be a json object`)
+  }
 }
 
-function assertRetrocastCandidate(
+function assertRetrocastFailure(
   value: unknown,
   path: string
+): asserts value is RetrocastFailureCandidate["failure"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${path} must be an object`)
+  }
+
+  const failure = value as Partial<RetrocastFailureCandidate["failure"]>
+  if (typeof failure.code !== "string" || failure.code.length === 0) {
+    throw new Error(`${path}.code must be a non-empty string`)
+  }
+  for (const field of [
+    "message",
+    "target_id",
+    "target_smiles",
+    "target_inchikey",
+  ] as const) {
+    if (failure[field] != null && typeof failure[field] !== "string") {
+      throw new Error(`${path}.${field} must be a string or null`)
+    }
+  }
+  if (
+    failure.context !== undefined &&
+    (typeof failure.context !== "object" || Array.isArray(failure.context))
+  ) {
+    throw new Error(`${path}.context must be a json object`)
+  }
+}
+
+export function isRetrocastRouteCandidate(
+  candidate: RetrocastCandidate
+): candidate is RetrocastRouteCandidate {
+  return candidate.route != null
+}
+
+export function isRetrocastFailureCandidate(
+  candidate: RetrocastCandidate
+): candidate is RetrocastFailureCandidate {
+  return candidate.failure != null
+}
+
+export function assertRetrocastCandidate(
+  value: unknown,
+  path = "candidate"
 ): asserts value is RetrocastCandidate {
   if (!value || typeof value !== "object") {
     throw new Error(`${path} must be an object`)
   }
 
   const candidate = value as Partial<RetrocastCandidate>
-  if (typeof candidate.rank !== "number") {
-    throw new Error(`${path}.rank must be a number`)
+  if (!Number.isInteger(candidate.rank) || (candidate.rank ?? 0) < 1) {
+    throw new Error(`${path}.rank must be a positive integer`)
   }
   const hasRoute = candidate.route != null
   const hasFailure = candidate.failure != null
@@ -108,6 +195,8 @@ function assertRetrocastCandidate(
   }
   if (hasRoute) {
     assertRetrocastRoute(candidate.route, `${path}.route`)
+  } else {
+    assertRetrocastFailure(candidate.failure, `${path}.failure`)
   }
 }
 
@@ -128,10 +217,15 @@ export function parseRetrocastCandidates(
       )
     }
 
-    candidatesByTarget[targetId] = candidates.map((candidate, index) => {
+    const parsedCandidates = candidates.map((candidate, index) => {
       assertRetrocastCandidate(candidate, `candidates[${targetId}][${index}]`)
       return candidate
     })
+    const ranks = new Set(parsedCandidates.map((candidate) => candidate.rank))
+    if (ranks.size !== parsedCandidates.length) {
+      throw new Error(`candidates[${targetId}] contains duplicate ranks`)
+    }
+    candidatesByTarget[targetId] = parsedCandidates
   }
 
   return candidatesByTarget
@@ -455,7 +549,7 @@ export function projectRetrocastCandidates(
 ): RouteProjection[] {
   return Object.entries(candidatesByTarget).flatMap(([targetId, candidates]) =>
     candidates.flatMap((candidate) =>
-      candidate.route
+      isRetrocastRouteCandidate(candidate)
         ? [
             projectRetrocastRoute(candidate.route, {
               targetId,
