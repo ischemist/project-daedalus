@@ -50,7 +50,7 @@ export function parseCanonicalMetricKey(
     }
   }
 
-  const solv = /^solv_([0-3])\[(.+)]_(rate|mrr)$/.exec(key)
+  const solv = /^solv_([0-3])\[([\s\S]+)]_(rate|mrr)$/.exec(key)
   if (!solv) {
     return null
   }

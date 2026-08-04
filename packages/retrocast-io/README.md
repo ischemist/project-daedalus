@@ -73,7 +73,12 @@ for (const [targetId, target] of Object.entries(bundle.evaluation.targets)) {
 The import loader streams `candidates.json.gz` one target at a time into
 canonical digests, releases each raw target, and then aligns those digests
 with `evaluation.json.gz`. Its result intentionally has no
-`candidatesByTarget` field.
+`candidatesByTarget` field. A single streamed target value is capped at 64 MiB
+of JSON characters to stop malformed gzip input from growing without bound.
+The largest target across the 84-bundle v0.8.2 migration corpus is 1,494,049
+characters, leaving 44.9x headroom. The canonical evaluation tree is still
+retained, so this is a lower-peak-memory import path rather than a fully
+bounded-memory loader.
 
 Target-keyed maps are returned as null-prototype records so identifiers such
 as `__proto__` and `constructor` remain ordinary own keys. Use `Object.hasOwn`

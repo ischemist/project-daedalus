@@ -371,14 +371,13 @@ function assertAggregateStatus(
   checks: RetrocastCheckResult[],
   label: string
 ): void {
-  const checksAreDispositive = checks.every(
-    (check) => check.status === "pass" || check.status === "fail"
-  )
+  if (checks.some((check) => check.status === "not_evaluated")) {
+    throw new Error(`${label}.checks cannot contain not_evaluated statuses`)
+  }
   const consistent =
-    checksAreDispositive &&
-    ((status === "pass" && checks.every((check) => check.status === "pass")) ||
-      (status === "fail" && checks.some((check) => check.status === "fail")) ||
-      (status === "not_evaluated" && checks.length === 0))
+    (status === "pass" && checks.every((check) => check.status === "pass")) ||
+    (status === "fail" && checks.some((check) => check.status === "fail")) ||
+    (status === "not_evaluated" && checks.length === 0)
   if (!consistent) {
     throw new Error(`${label}.status does not agree with its checks`)
   }
@@ -561,7 +560,7 @@ function parseAssessmentRouteBinding(
   return {
     ...binding,
     profile_id: parseNonEmptyString(binding.profile_id, `${label}.profile_id`),
-    sha256,
+    sha256: sha256.toLowerCase(),
   }
 }
 
@@ -1025,7 +1024,7 @@ function parseManifestFileInfo(
   return {
     label: parseNullableString(value.label, `${label}.label`),
     path: parseNonEmptyString(value.path, `${label}.path`),
-    sha256,
+    sha256: sha256.toLowerCase(),
     content_hash: parseNullableString(
       value.content_hash,
       `${label}.content_hash`

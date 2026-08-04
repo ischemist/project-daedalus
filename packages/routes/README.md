@@ -34,6 +34,10 @@ RetroCast candidates are represented as an exclusive union: every ranked slot
 contains exactly one route or one failure record. Parsing rejects missing,
 ambiguous, duplicate-rank, and malformed candidate slots.
 
+The parsed target map has a null prototype so identifiers such as `__proto__`
+remain ordinary own keys. Use `Object.hasOwn(candidatesByTarget, targetId)`;
+do not call `candidatesByTarget.hasOwnProperty(targetId)`.
+
 ## exports
 
 - `@ischemist/routes`: shared types, projection helpers, signature helpers, visualization helpers

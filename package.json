@@ -9,7 +9,7 @@
     "lint": "pnpm packages:build && oxlint --type-aware --quiet apps/web packages",
     "check-types": "pnpm packages:build && pnpm --filter @ischemist/routes check-types && pnpm --filter @ischemist/retrocast-io check-types && pnpm --filter @ischemist/route-viewer check-types && tsgo --project apps/web/tsconfig.json --noEmit",
     "typecheck": "pnpm check-types",
-    "test": "pnpm --filter @ischemist/retrocast-io test",
+    "test": "pnpm -r --if-present test",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "changeset": "changeset",

@@ -24,6 +24,8 @@ const route = {
   schema_version: "2",
 }
 
+targetA.acceptable_routes = [route]
+
 const failure = {
   code: "adapter.invalid_route",
   target_id: targetB.id,
@@ -108,11 +110,11 @@ export function createEvaluateV2Fixture() {
       "solv_0[fixture-stock]_mrr": { value: 0.5, count: 2 },
     },
     by_stratum: {
-      "depth unknown": {
-        tier_0_validity_rate: { value: 0.5, count: 2 },
-        tier_0_validity_mrr: { value: 0.5, count: 2 },
-        "solv_0[fixture-stock]_rate": { value: 0.5, count: 2 },
-        "solv_0[fixture-stock]_mrr": { value: 0.5, count: 2 },
+      "depth 0": {
+        tier_0_validity_rate: { value: 1, count: 1 },
+        tier_0_validity_mrr: { value: 1, count: 1 },
+        "solv_0[fixture-stock]_rate": { value: 1, count: 1 },
+        "solv_0[fixture-stock]_mrr": { value: 1, count: 1 },
       },
     },
     bootstrap_resamples: 100,

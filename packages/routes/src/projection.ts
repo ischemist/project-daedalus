@@ -62,7 +62,8 @@ function assertRetrocastMolecule(
   }
   if (
     molecule.annotations !== undefined &&
-    (typeof molecule.annotations !== "object" ||
+    (molecule.annotations === null ||
+      typeof molecule.annotations !== "object" ||
       Array.isArray(molecule.annotations))
   ) {
     throw new Error(`${path}.annotations must be a json object`)
@@ -96,7 +97,8 @@ function assertRetrocastMolecule(
     }
     if (
       reaction.annotations !== undefined &&
-      (typeof reaction.annotations !== "object" ||
+      (reaction.annotations === null ||
+        typeof reaction.annotations !== "object" ||
         Array.isArray(reaction.annotations))
     ) {
       throw new Error(`${path}.product_of.annotations must be a json object`)
@@ -125,7 +127,9 @@ export function assertRetrocastRoute(
   }
   if (
     route.annotations !== undefined &&
-    (typeof route.annotations !== "object" || Array.isArray(route.annotations))
+    (route.annotations === null ||
+      typeof route.annotations !== "object" ||
+      Array.isArray(route.annotations))
   ) {
     throw new Error(`${path}.annotations must be a json object`)
   }
@@ -155,7 +159,9 @@ function assertRetrocastFailure(
   }
   if (
     failure.context !== undefined &&
-    (typeof failure.context !== "object" || Array.isArray(failure.context))
+    (failure.context === null ||
+      typeof failure.context !== "object" ||
+      Array.isArray(failure.context))
   ) {
     throw new Error(`${path}.context must be a json object`)
   }
@@ -219,7 +225,9 @@ export function parseRetrocastCandidates(
 
     const parsedCandidates = candidates.map((candidate, index) => {
       assertRetrocastCandidate(candidate, `candidates[${targetId}][${index}]`)
-      return candidate
+      return candidate.route != null
+        ? { rank: candidate.rank, route: candidate.route }
+        : { rank: candidate.rank, failure: candidate.failure }
     })
     const ranks = new Set(parsedCandidates.map((candidate) => candidate.rank))
     if (ranks.size !== parsedCandidates.length) {

@@ -63,6 +63,8 @@ type CandidateDigest = {
   sha256: string
 }
 
+const FILE_HASH_CONCURRENCY = 8
+
 export async function computeFileSha256(filePath: string): Promise<string> {
   const hash = createHash("sha256")
   for await (const chunk of createReadStream(filePath)) {
@@ -143,13 +145,23 @@ async function verifyTrackedFiles(
   files: { info: RetrocastManifestFileInfo; filePath: string }[],
   label: string
 ): Promise<string[]> {
-  const hashes = await Promise.all(
-    files.map(async ({ info, filePath }) => ({
-      info,
-      filePath,
-      actual: await computeFileSha256(filePath),
-    }))
-  )
+  const hashes: {
+    info: RetrocastManifestFileInfo
+    filePath: string
+    actual: string
+  }[] = []
+  for (let index = 0; index < files.length; index += FILE_HASH_CONCURRENCY) {
+    const batch = files.slice(index, index + FILE_HASH_CONCURRENCY)
+    hashes.push(
+      ...(await Promise.all(
+        batch.map(async ({ info, filePath }) => ({
+          info,
+          filePath,
+          actual: await computeFileSha256(filePath),
+        }))
+      ))
+    )
+  }
   for (const { info, actual } of hashes) {
     const expected = info.sha256.toLowerCase()
     if (actual !== expected) {
@@ -299,7 +311,14 @@ function assertMetric(
             sum + metricContribution(target, tier, solv, statistic),
           0
         ) / targets.length
-  if (Math.abs(metric.value - expectedValue) > 1e-12) {
+  // The fixed floor absorbs producer serialization noise for ordinary runs;
+  // the epsilon term grows only for larger target sets instead of making the
+  // comparison proportionally lax at today's corpus sizes.
+  const tolerance = Math.max(
+    1e-12,
+    Number.EPSILON * Math.max(1, targets.length)
+  )
+  if (Math.abs(metric.value - expectedValue) > tolerance) {
     throw new Error(
       `${metricKey} value ${metric.value} does not match evaluation value ${expectedValue}`
     )
@@ -483,6 +502,17 @@ async function prepareEvaluationBundle(
   rootDir: string,
   options: LoadEvaluationBundleOptions
 ): Promise<PreparedEvaluationBundle> {
+  const verificationPolicy: ArtifactVerificationPolicy =
+    options.verification ?? "outputs"
+  if (
+    verificationPolicy !== "outputs" &&
+    verificationPolicy !== "outputs-and-sources"
+  ) {
+    throw new Error(
+      `unsupported artifact verification policy: ${String(verificationPolicy)}`
+    )
+  }
+
   const resolvedRoot = await realpath(path.resolve(rootDir))
   if (!(await stat(resolvedRoot)).isDirectory()) {
     throw new Error("evaluation bundle root must be a directory")
@@ -524,34 +554,16 @@ async function prepareEvaluationBundle(
     })),
     "output"
   )
-  const verificationPolicy: ArtifactVerificationPolicy =
-    options.verification ?? "outputs"
-  if (
-    verificationPolicy !== "outputs" &&
-    verificationPolicy !== "outputs-and-sources"
-  ) {
-    throw new Error(
-      `unsupported artifact verification policy: ${String(verificationPolicy)}`
+  let verifiedSourceFiles: string[] = []
+  if (verificationPolicy === "outputs-and-sources") {
+    const sourceFiles = await Promise.all(
+      manifest.source_files.map(async (info) => ({
+        info,
+        filePath: await resolveSourceFile(resolvedRoot, info),
+      }))
     )
+    verifiedSourceFiles = await verifyTrackedFiles(sourceFiles, "source")
   }
-  const sourceFiles =
-    verificationPolicy === "outputs-and-sources"
-      ? await Promise.all(
-          manifest.source_files.map((info) =>
-            resolveSourceFile(resolvedRoot, info)
-          )
-        )
-      : []
-  const verifiedSourceFiles =
-    verificationPolicy === "outputs-and-sources"
-      ? await verifyTrackedFiles(
-          manifest.source_files.map((info, index) => ({
-            info,
-            filePath: sourceFiles[index] as string,
-          })),
-          "source"
-        )
-      : []
 
   return {
     rootDir: resolvedRoot,

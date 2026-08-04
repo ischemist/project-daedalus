@@ -8,11 +8,15 @@ import {
   streamJsonObjectEntriesFromReadable,
 } from "../dist/streaming.js"
 
-async function collectEntries(chunks) {
+async function collectEntries(chunks, limits) {
   const entries = []
-  await streamJsonObjectEntriesFromChunks(chunks, async (key, value) => {
-    entries.push([key, value])
-  })
+  await streamJsonObjectEntriesFromChunks(
+    chunks,
+    async (key, value) => {
+      entries.push([key, value])
+    },
+    limits
+  )
   return entries
 }
 
@@ -54,18 +58,52 @@ void test("rejects primitive target values", async () => {
       /must be an array or object/
     )
   }
+  await assert.rejects(
+    collectEntries(['{"target":', "null}"]),
+    /must be an array or object/
+  )
 })
 
 void test("rejects truncated and malformed streamed json", async () => {
-  for (const malformed of [
-    '{"target":[]',
-    '{"target" []}',
-    '{"target":[}',
-    '{"target":[{"text":"unterminated}]}',
-    '{"bad\\xkey":[]}',
+  for (const [malformed, expected] of [
+    ['{"target":[]', /ended before its object was complete/],
+    ['{"target" []}', /must be followed by a colon/],
+    ['{"target":[}', SyntaxError],
+    [
+      '{"target":[{"text":"unterminated}]}',
+      /ended before its object was complete/,
+    ],
+    ['{"bad\\xkey":[]}', SyntaxError],
   ]) {
-    await assert.rejects(collectEntries([malformed]))
+    await assert.rejects(collectEntries([malformed]), expected)
   }
+})
+
+void test("caps key and per-target value buffers", async () => {
+  await assert.rejects(
+    collectEntries(['{"target":[]}'], { maxKeyCharacters: 4 }),
+    /key exceeds 4 characters/
+  )
+  await assert.rejects(
+    collectEntries(['{"target":[1,2,3]}'], { maxValueCharacters: 4 }),
+    /value for "target" exceeds 4 characters/
+  )
+  await assert.rejects(
+    collectEntries(['{"target":[]}'], { maxValueCharacters: 0 }),
+    /maxValueCharacters must be a positive safe integer/
+  )
+})
+
+void test("destroys the readable and preserves handler failures", async () => {
+  const source = Readable.from(['{"target":[]}'])
+  const failure = new Error("handler failed")
+  await assert.rejects(
+    streamJsonObjectEntriesFromReadable(source, false, async () => {
+      throw failure
+    }),
+    (error) => error === failure
+  )
+  assert.equal(source.destroyed, true)
 })
 
 void test("propagates gzip decoding errors through the readable seam", async () => {

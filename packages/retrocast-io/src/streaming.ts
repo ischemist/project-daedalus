@@ -1,8 +1,21 @@
 import { createReadStream } from "node:fs"
-import type { Readable } from "node:stream"
+import { PassThrough, type Readable } from "node:stream"
+import { pipeline } from "node:stream/promises"
 import { createGunzip } from "node:zlib"
 
 type JsonObjectEntryHandler = (key: string, value: unknown) => Promise<void>
+
+export type StreamingJsonObjectLimits = {
+  maxKeyCharacters?: number
+  maxValueCharacters?: number
+}
+
+const DEFAULT_MAX_KEY_CHARACTERS = 64 * 1024
+// The largest serialized target entry in the 84-bundle v0.8.2 migration
+// corpus is 1,494,049 characters. This 64 MiB cap leaves 44.9x headroom while
+// bounding malformed single-target accumulation; the canonical evaluation
+// tree remains intentionally resident and is not covered by this limit.
+const DEFAULT_MAX_VALUE_CHARACTERS = 64 * 1024 * 1024
 
 type ParsePhase =
   | "start"
@@ -29,7 +42,12 @@ export async function streamJsonObjectEntries(
   handleEntry: JsonObjectEntryHandler
 ): Promise<void> {
   const source = createReadStream(filePath)
-  await streamJsonObjectEntriesFromReadable(source, compressed, handleEntry)
+  try {
+    await streamJsonObjectEntriesFromReadable(source, compressed, handleEntry)
+  } catch (error) {
+    source.destroy()
+    throw error
+  }
 }
 
 export async function streamJsonObjectEntriesFromReadable(
@@ -37,18 +55,80 @@ export async function streamJsonObjectEntriesFromReadable(
   compressed: boolean,
   handleEntry: JsonObjectEntryHandler
 ): Promise<void> {
-  const input = compressed ? source.pipe(createGunzip()) : source
+  const input = compressed ? createGunzip() : new PassThrough()
   input.setEncoding("utf8")
-  await streamJsonObjectEntriesFromChunks(
+  let parsingError: unknown
+  const parsing = streamJsonObjectEntriesFromChunks(
     input as AsyncIterable<string>,
     handleEntry
-  )
+  ).catch((error: unknown) => {
+    parsingError = error
+    throw error
+  })
+  const pumping = pipeline(source, input)
+  try {
+    await Promise.all([pumping, parsing])
+  } catch (error) {
+    source.destroy()
+    input.destroy()
+    await Promise.allSettled([pumping, parsing])
+    throw parsingError ?? error
+  }
+}
+
+function parseLimit(
+  value: number | undefined,
+  fallback: number,
+  label: string
+): number {
+  const limit = value ?? fallback
+  if (!Number.isSafeInteger(limit) || limit < 1) {
+    throw new Error(`${label} must be a positive safe integer`)
+  }
+  return limit
+}
+
+function appendValuePart(
+  valueParts: string[],
+  part: string,
+  valueCharacters: number,
+  maxValueCharacters: number,
+  key: string
+): number {
+  const nextValueCharacters = valueCharacters + part.length
+  if (nextValueCharacters > maxValueCharacters) {
+    throw new Error(
+      `streamed json object value for ${JSON.stringify(key)} exceeds ${maxValueCharacters} characters`
+    )
+  }
+  valueParts.push(part)
+  return nextValueCharacters
+}
+
+function streamingLimits(limits: StreamingJsonObjectLimits): {
+  maxKeyCharacters: number
+  maxValueCharacters: number
+} {
+  return {
+    maxKeyCharacters: parseLimit(
+      limits.maxKeyCharacters,
+      DEFAULT_MAX_KEY_CHARACTERS,
+      "maxKeyCharacters"
+    ),
+    maxValueCharacters: parseLimit(
+      limits.maxValueCharacters,
+      DEFAULT_MAX_VALUE_CHARACTERS,
+      "maxValueCharacters"
+    ),
+  }
 }
 
 export async function streamJsonObjectEntriesFromChunks(
   chunks: AsyncIterable<string> | Iterable<string>,
-  handleEntry: JsonObjectEntryHandler
+  handleEntry: JsonObjectEntryHandler,
+  limits: StreamingJsonObjectLimits = {}
 ): Promise<void> {
+  const { maxKeyCharacters, maxValueCharacters } = streamingLimits(limits)
   let phase: ParsePhase = "start"
   let keyToken = ""
   let key = ""
@@ -57,10 +137,13 @@ export async function streamJsonObjectEntriesFromChunks(
   let valueDepth = 0
   let valueInString = false
   let valueEscaped = false
+  let valueStarted = false
+  let valueCharacters = 0
   let complete = false
 
   for await (const chunk of chunks) {
-    let valueSegmentStart: number | null = phase === "value" ? 0 : null
+    let valueSegmentStart: number | null =
+      phase === "value" && valueStarted ? 0 : null
     for (let index = 0; index < chunk.length; index += 1) {
       const character = chunk[index] as string
 
@@ -75,6 +158,7 @@ export async function streamJsonObjectEntriesFromChunks(
             )
           }
           valueSegmentStart = index
+          valueStarted = true
         }
 
         if (valueInString) {
@@ -95,13 +179,21 @@ export async function streamJsonObjectEntriesFromChunks(
             throw new Error("streamed json object has unbalanced delimiters")
           }
           if (valueDepth === 0) {
-            valueParts.push(chunk.slice(valueSegmentStart, index + 1))
+            valueCharacters = appendValuePart(
+              valueParts,
+              chunk.slice(valueSegmentStart, index + 1),
+              valueCharacters,
+              maxValueCharacters,
+              key
+            )
             const valueText = valueParts.join("")
             valueParts = []
+            valueCharacters = 0
             valueSegmentStart = null
             await handleEntry(key, JSON.parse(valueText) as unknown)
             phase = "comma-or-end"
             key = ""
+            valueStarted = false
             continue
           }
         }
@@ -142,6 +234,11 @@ export async function streamJsonObjectEntriesFromChunks(
           break
         case "key":
           keyToken += character
+          if (keyToken.length > maxKeyCharacters) {
+            throw new Error(
+              `streamed json object key exceeds ${maxKeyCharacters} characters`
+            )
+          }
           if (keyEscaped) {
             keyEscaped = false
           } else if (character === "\\") {
@@ -163,6 +260,8 @@ export async function streamJsonObjectEntriesFromChunks(
           valueDepth = 0
           valueInString = false
           valueEscaped = false
+          valueStarted = false
+          valueCharacters = 0
           break
         case "comma-or-end":
           if (character === ",") {
@@ -181,7 +280,13 @@ export async function streamJsonObjectEntriesFromChunks(
       }
     }
     if (phase === "value" && valueSegmentStart !== null) {
-      valueParts.push(chunk.slice(valueSegmentStart))
+      valueCharacters = appendValuePart(
+        valueParts,
+        chunk.slice(valueSegmentStart),
+        valueCharacters,
+        maxValueCharacters,
+        key
+      )
     }
   }
 
