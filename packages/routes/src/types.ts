@@ -31,11 +31,23 @@ export type RetrocastFailureRecord = {
   context?: JsonObject
 }
 
-export type RetrocastCandidate = {
+type RetrocastCandidateRank = {
   rank: number
-  route?: RetrocastRoute | null
-  failure?: RetrocastFailureRecord | null
 }
+
+export type RetrocastRouteCandidate = RetrocastCandidateRank & {
+  route: RetrocastRoute
+  failure?: null
+}
+
+export type RetrocastFailureCandidate = RetrocastCandidateRank & {
+  route?: null
+  failure: RetrocastFailureRecord
+}
+
+export type RetrocastCandidate =
+  | RetrocastRouteCandidate
+  | RetrocastFailureCandidate
 
 export type RetrocastCandidatesByTarget = Record<string, RetrocastCandidate[]>
 

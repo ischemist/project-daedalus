@@ -1,0 +1,727 @@
+import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
+import { gunzipSync, gzipSync } from "node:zlib"
+import {
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import test from "node:test"
+
+import {
+  assertCandidateAlignment,
+  getSolvMetric,
+  getTierValidityMetric,
+  loadEvaluationBundle,
+  loadEvaluationBundleForImport,
+  parseAnalysisFile,
+  parseBenchmarkDefinition,
+  parseCandidatesFile,
+  parseCanonicalMetricKey,
+  parseEvaluationFile,
+  solvMetricKey,
+  tierValidityMetricKey,
+} from "../dist/index.js"
+import {
+  parseJsonArtifactBytes,
+  readArtifactFromFileHandle,
+} from "../dist/files.js"
+import { createEvaluateV2Fixture } from "./fixtures/evaluate-v2.mjs"
+
+function sha256(content) {
+  return createHash("sha256").update(content).digest("hex")
+}
+
+function retargetFixtureWithPrototypeNames(fixture) {
+  const taskTargetA = fixture.evaluation.task.targets["target-a"]
+  const taskTargetB = fixture.evaluation.task.targets["target-b"]
+  const evaluationTargetA = fixture.evaluation.targets["target-a"]
+  const evaluationTargetB = fixture.evaluation.targets["target-b"]
+  taskTargetA.id = "__proto__"
+  taskTargetB.id = "constructor"
+  evaluationTargetA.target.id = "__proto__"
+  evaluationTargetB.target.id = "constructor"
+  evaluationTargetB.candidates[0].failure.target_id = "constructor"
+  fixture.candidates["target-b"][0].failure.target_id = "constructor"
+
+  fixture.evaluation.task.targets = Object.fromEntries([
+    ["__proto__", taskTargetA],
+    ["constructor", taskTargetB],
+  ])
+  fixture.evaluation.task.constraints = Object.fromEntries([
+    ["__proto__", []],
+    ["constructor", []],
+  ])
+  fixture.evaluation.targets = Object.fromEntries([
+    ["__proto__", evaluationTargetA],
+    ["constructor", evaluationTargetB],
+  ])
+  fixture.candidates = Object.fromEntries([
+    ["__proto__", fixture.candidates["target-a"]],
+    ["constructor", fixture.candidates["target-b"]],
+  ])
+  return fixture
+}
+
+async function writeFixtureBundle(
+  transform = (fixture) => fixture,
+  transformManifest = (manifest) => manifest
+) {
+  const rootDir = await mkdtemp(path.join(tmpdir(), "retrocast-io-test-"))
+  const fixture = transform(createEvaluateV2Fixture())
+  const artifacts = {
+    "candidates.json.gz": gzipSync(JSON.stringify(fixture.candidates)),
+    "evaluation.json.gz": gzipSync(JSON.stringify(fixture.evaluation)),
+    "analysis.json.gz": gzipSync(JSON.stringify(fixture.analysis)),
+    "evaluation-run.json": Buffer.from(JSON.stringify(fixture.evaluationRun)),
+  }
+  await Promise.all(
+    Object.entries(artifacts).map(([fileName, content]) =>
+      writeFile(path.join(rootDir, fileName), content)
+    )
+  )
+  const sourceContent = Buffer.from("raw planner output\n")
+  await writeFile(path.join(rootDir, "raw-results.json"), sourceContent)
+  const manifest = transformManifest({
+    schema_version: "2",
+    retrocast_version: "0.8.2",
+    created_at: "2026-08-04T00:00:00Z",
+    action: "evaluate:v2",
+    parameters: { mode: "strict" },
+    directives: {},
+    source_files: [{ path: "raw-results.json", sha256: sha256(sourceContent) }],
+    output_files: Object.entries(artifacts).map(([fileName, content]) => ({
+      path: fileName,
+      sha256: sha256(content),
+    })),
+    statistics: { targets: 2, candidates: 2 },
+    summary: {},
+  })
+  await writeFile(path.join(rootDir, "manifest.json"), JSON.stringify(manifest))
+  return rootDir
+}
+
+async function rewriteBundleArtifact(rootDir, fileName, transform) {
+  const artifactPath = path.join(rootDir, fileName)
+  const compressed = fileName.endsWith(".gz")
+  const content = await readFile(artifactPath)
+  const value = JSON.parse(
+    (compressed ? gunzipSync(content) : content).toString("utf8")
+  )
+  const encoded = Buffer.from(JSON.stringify(transform(value)))
+  const rewritten = compressed ? gzipSync(encoded) : encoded
+  await writeFile(artifactPath, rewritten)
+
+  const manifestPath = path.join(rootDir, "manifest.json")
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
+  const output = manifest.output_files.find(
+    (file) => path.basename(file.path) === fileName
+  )
+  output.sha256 = sha256(rewritten)
+  await writeFile(manifestPath, JSON.stringify(manifest))
+}
+
+void test("loads and verifies a compact v0.8.2 evaluate bundle", async (t) => {
+  const rootDir = await writeFixtureBundle()
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  const bundle = await loadEvaluationBundle(rootDir, {
+    verification: "outputs-and-sources",
+  })
+
+  assert.match(bundle.manifestSha256, /^[a-f\d]{64}$/)
+  assert.equal(bundle.verification.outputFiles.length, 4)
+  assert.equal(bundle.verification.sourceFiles.length, 1)
+  assert.equal(bundle.manifest.output_files[0].label, null)
+  assert.equal(bundle.manifest.output_files[0].content_hash, null)
+  assert.equal(bundle.evaluation.task.metric_label, null)
+  assert.deepEqual(
+    bundle.evaluation.targets["target-a"].candidates[0].validity.tiers["0"]
+      .checks,
+    []
+  )
+  assert.equal(
+    bundle.evaluation.targets["target-a"].candidates[0].matches_acceptable,
+    false
+  )
+  assert.equal(
+    bundle.evaluation.targets["target-a"].candidates[0]
+      .matched_acceptable_index,
+    null
+  )
+  assert.equal(
+    bundle.evaluation.targets["target-b"].candidates[0].validity.tiers["0"]
+      .checks[0].message,
+    null
+  )
+  assert.equal(
+    bundle.analysis.metrics["solv_0[fixture-stock]_rate"].ci_low,
+    null
+  )
+  assert.equal(
+    bundle.analysis.metrics["solv_0[fixture-stock]_rate"].reliability,
+    null
+  )
+  assert.ok("depth 0" in bundle.analysis.by_stratum)
+})
+
+void test("binds artifact hashing and parsing to one open descriptor", async (t) => {
+  const rootDir = await mkdtemp(path.join(tmpdir(), "retrocast-io-binding-"))
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+  const artifactPath = path.join(rootDir, "artifact.json")
+  const replacementPath = path.join(rootDir, "replacement.json")
+  const trusted = Buffer.from('{"trusted":true}')
+  await writeFile(artifactPath, trusted)
+  await writeFile(replacementPath, '{"trusted":false}')
+
+  const handle = await open(artifactPath, "r")
+  await rename(replacementPath, artifactPath)
+  const artifact = await readArtifactFromFileHandle(handle)
+  await handle.close()
+
+  assert.equal(artifact.sha256, sha256(trusted))
+  assert.deepEqual(await parseJsonArtifactBytes(artifact.content, false), {
+    trusted: true,
+  })
+  assert.deepEqual(JSON.parse(await readFile(artifactPath, "utf8")), {
+    trusted: false,
+  })
+})
+
+void test("streams candidate alignment and returns evaluation as canonical", async (t) => {
+  const rootDir = await writeFixtureBundle((fixture) => {
+    fixture.candidates["target-a"][0].failure = null
+    fixture.candidates["target-b"][0].route = null
+    return fixture
+  })
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  const bundle = await loadEvaluationBundleForImport(rootDir)
+
+  assert.equal(bundle.candidateTargetCount, 2)
+  assert.equal(bundle.candidateCount, 2)
+  assert.equal(bundle.evaluation.targets["target-a"].candidates.length, 1)
+  assert.equal("candidatesByTarget" in bundle, false)
+})
+
+void test("derives effective constraint overrides and metric labels like RetroCast", () => {
+  const fixture = createEvaluateV2Fixture()
+  fixture.evaluation.task.default_constraints.push({
+    kind: "retrocast.route_depth",
+    max_depth: "short",
+  })
+  fixture.evaluation.task.constraints = {
+    "target-a": [
+      { kind: "retrocast.stock_termination", stock: "target-stock" },
+    ],
+  }
+  fixture.evaluation.metric_label = "fixture-stock+depth"
+  fixture.evaluation.targets["target-a"].effective_constraints = [
+    { kind: "retrocast.route_depth", max_depth: "short" },
+    { kind: "retrocast.stock_termination", stock: "target-stock" },
+  ]
+  fixture.evaluation.targets["target-b"].effective_constraints = [
+    { kind: "retrocast.route_depth", max_depth: "short" },
+    { kind: "retrocast.stock_termination", stock: "fixture-stock" },
+  ]
+
+  const parsed = parseEvaluationFile(fixture.evaluation)
+  assert.equal(parsed.metric_label, "fixture-stock+depth")
+
+  fixture.evaluation.targets["target-a"].effective_constraints.reverse()
+  assert.throws(
+    () => parseEvaluationFile(fixture.evaluation),
+    /effective_constraints does not match task overrides/
+  )
+})
+
+void test("preserves forward-compatible RouteValidity assessments and extensions", () => {
+  const fixture = createEvaluateV2Fixture()
+  const validity = fixture.evaluation.targets["target-a"].candidates[0].validity
+  const obligation = {
+    claim: { tier: 1, obligation: "graph_rewrite_integrity" },
+    evaluation: { state: "complete", verdict: "proven" },
+    receipts: [{ evidence_id: "evidence-1" }],
+    extension: { preserved: true },
+  }
+  validity.reaction_assessments = [
+    {
+      reaction_id: "rc:r:/",
+      semantics_id: "semantics-v1",
+      identities: { rewrite: { state: "established" } },
+      coverage: { state: "complete" },
+      obligations: [obligation],
+      closest_reference: null,
+      extension: "kept",
+    },
+  ]
+  validity.molecule_assessments = [obligation]
+  validity.route_assessments = [obligation]
+  validity.assessment_route_binding = {
+    profile_id: "retrocast.route-assessment-binding.full-json-ordered/v1",
+    sha256: "A".repeat(64),
+    extension: 1,
+  }
+  validity.future_field = { opaque: [1, 2, 3] }
+
+  const parsed = parseEvaluationFile(fixture.evaluation)
+  const parsedValidity = parsed.targets["target-a"].candidates[0].validity
+  assert.deepEqual(
+    parsedValidity.reaction_assessments,
+    validity.reaction_assessments
+  )
+  assert.deepEqual(
+    parsedValidity.molecule_assessments?.[0],
+    validity.molecule_assessments[0]
+  )
+  assert.deepEqual(
+    parsedValidity.route_assessments?.[0],
+    validity.route_assessments[0]
+  )
+  assert.deepEqual(parsedValidity.assessment_route_binding, {
+    ...validity.assessment_route_binding,
+    sha256: "a".repeat(64),
+  })
+  assert.deepEqual(parsedValidity.future_field, validity.future_field)
+
+  validity.reaction_assessments[0].obligations[0].receipts = "invalid"
+  assert.throws(
+    () => parseEvaluationFile(fixture.evaluation),
+    /receipts must be an array/
+  )
+})
+
+void test("canonical metric helpers preserve labels and missing evidence", () => {
+  const analysis = parseAnalysisFile(createEvaluateV2Fixture().analysis)
+  const solvKey = solvMetricKey(0, "n1-n5-stock")
+  const complexLabel = "vendor [stock] tier\nA"
+
+  assert.equal(tierValidityMetricKey(0), "tier_0_validity_rate")
+  assert.equal(solvKey, "solv_0[n1-n5-stock]_rate")
+  assert.deepEqual(parseCanonicalMetricKey(solvKey), {
+    family: "solv",
+    tier: 0,
+    label: "n1-n5-stock",
+    statistic: "rate",
+  })
+  assert.deepEqual(parseCanonicalMetricKey(solvMetricKey(0, complexLabel)), {
+    family: "solv",
+    tier: 0,
+    label: complexLabel,
+    statistic: "rate",
+  })
+  assert.equal(getTierValidityMetric(analysis, 0)?.value, 0.5)
+  assert.equal(getSolvMetric(analysis, 0, "fixture-stock")?.value, 0.5)
+  assert.equal(getTierValidityMetric(analysis, 1), undefined)
+  assert.equal(getSolvMetric(analysis, 0, "another-stock"), undefined)
+})
+
+void test("rejects candidate route and failure ambiguity", () => {
+  const fixture = createEvaluateV2Fixture()
+  fixture.candidates["target-a"][0].failure = {
+    code: "adapter.invalid_route",
+  }
+  assert.throws(
+    () => parseCandidatesFile(fixture.candidates),
+    /cannot contain both route and failure/
+  )
+})
+
+void test("normalizes inactive candidate fields and rejects null json objects", () => {
+  const normalizedFixture = createEvaluateV2Fixture()
+  normalizedFixture.candidates["target-a"][0].failure = null
+  normalizedFixture.candidates["target-b"][0].route = null
+  const normalized = parseCandidatesFile(normalizedFixture.candidates)
+  assert.equal(Object.hasOwn(normalized["target-a"][0], "failure"), false)
+  assert.equal(Object.hasOwn(normalized["target-b"][0], "route"), false)
+
+  const routeFixture = createEvaluateV2Fixture()
+  routeFixture.candidates["target-a"][0].route.annotations = null
+  assert.throws(
+    () => parseCandidatesFile(routeFixture.candidates),
+    /route\.annotations must be a json object/
+  )
+
+  const moleculeFixture = createEvaluateV2Fixture()
+  moleculeFixture.candidates["target-a"][0].route.target.annotations = null
+  assert.throws(
+    () => parseCandidatesFile(moleculeFixture.candidates),
+    /target\.annotations must be a json object/
+  )
+
+  const reactionFixture = createEvaluateV2Fixture()
+  reactionFixture.candidates["target-a"][0].route.target.product_of = {
+    reactants: [],
+    annotations: null,
+  }
+  assert.throws(
+    () => parseCandidatesFile(reactionFixture.candidates),
+    /product_of\.annotations must be a json object/
+  )
+
+  const failureFixture = createEvaluateV2Fixture()
+  failureFixture.candidates["target-b"][0].failure.context = null
+  assert.throws(
+    () => parseCandidatesFile(failureFixture.candidates),
+    /failure\.context must be a json object/
+  )
+})
+
+void test("preserves prototype-named target ids in null-prototype records", () => {
+  const fixture = retargetFixtureWithPrototypeNames(createEvaluateV2Fixture())
+
+  const benchmark = parseBenchmarkDefinition(fixture.evaluation.task)
+  const evaluation = parseEvaluationFile(fixture.evaluation)
+  const candidates = parseCandidatesFile(fixture.candidates)
+  assertCandidateAlignment(candidates, evaluation)
+
+  for (const record of [
+    benchmark.targets,
+    benchmark.constraints,
+    evaluation.task.targets,
+    evaluation.targets,
+    candidates,
+  ]) {
+    assert.equal(Object.getPrototypeOf(record), null)
+    assert.equal(Object.hasOwn(record, "__proto__"), true)
+    assert.equal(Object.hasOwn(record, "constructor"), true)
+  }
+  assert.equal(candidates.__proto__.length, 1)
+  assert.equal(candidates.constructor.length, 1)
+})
+
+void test("streams prototype-named target ids through bundle alignment", async (t) => {
+  const rootDir = await writeFixtureBundle(retargetFixtureWithPrototypeNames)
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  const bundle = await loadEvaluationBundleForImport(rootDir)
+  assert.equal(bundle.candidateTargetCount, 2)
+  assert.equal(Object.getPrototypeOf(bundle.evaluation.targets), null)
+  assert.equal(bundle.evaluation.targets.__proto__.candidates.length, 1)
+  assert.equal(bundle.evaluation.targets.constructor.candidates.length, 1)
+})
+
+void test("rejects rank and target mismatches", () => {
+  const fixture = createEvaluateV2Fixture()
+  const candidates = parseCandidatesFile(fixture.candidates)
+  fixture.evaluation.targets["target-a"].candidates[0].rank = 2
+  const evaluation = parseEvaluationFile(fixture.evaluation)
+  assert.throws(
+    () => assertCandidateAlignment(candidates, evaluation),
+    /candidate and evaluation slots differ/
+  )
+
+  const secondFixture = createEvaluateV2Fixture()
+  secondFixture.evaluation.targets["target-a"].target.smiles = "CCC"
+  assert.throws(
+    () => parseEvaluationFile(secondFixture.evaluation),
+    /route target does not match the enclosing target/
+  )
+})
+
+void test("rejects mismatched failure target provenance", () => {
+  const fixture = createEvaluateV2Fixture()
+  fixture.evaluation.targets["target-b"].candidates[0].failure.target_id =
+    "target-a"
+  assert.throws(
+    () => parseEvaluationFile(fixture.evaluation),
+    /failure target_id does not match the enclosing target/
+  )
+})
+
+void test("rejects aggregate statuses that disagree with checks", () => {
+  const tierFixture = createEvaluateV2Fixture()
+  tierFixture.evaluation.targets[
+    "target-b"
+  ].candidates[0].validity.tiers[0].status = "pass"
+  assert.throws(
+    () => parseEvaluationFile(tierFixture.evaluation),
+    /status does not agree with its checks/
+  )
+
+  const constraintFixture = createEvaluateV2Fixture()
+  constraintFixture.evaluation.targets["target-a"].candidates[0].constraints = {
+    status: "pass",
+    checks: [{ code: "constraint.failed", status: "fail" }],
+  }
+  assert.throws(
+    () => parseEvaluationFile(constraintFixture.evaluation),
+    /status does not agree with its checks/
+  )
+
+  const unevaluatedRouteFixture = createEvaluateV2Fixture()
+  unevaluatedRouteFixture.evaluation.targets[
+    "target-a"
+  ].candidates[0].constraints = { status: "not_evaluated" }
+  assert.throws(
+    () => parseEvaluationFile(unevaluatedRouteFixture.evaluation),
+    /route candidate constraints must be evaluated/
+  )
+
+  const unevaluatedCheckFixture = createEvaluateV2Fixture()
+  unevaluatedCheckFixture.evaluation.targets[
+    "target-a"
+  ].candidates[0].constraints = {
+    status: "pass",
+    checks: [{ code: "constraint.pending", status: "not_evaluated" }],
+  }
+  assert.throws(
+    () => parseEvaluationFile(unevaluatedCheckFixture.evaluation),
+    /checks cannot contain not_evaluated statuses/
+  )
+})
+
+void test("normalizes case-insensitive manifest digests", async (t) => {
+  const rootDir = await writeFixtureBundle(
+    (fixture) => fixture,
+    (manifest) => ({
+      ...manifest,
+      source_files: manifest.source_files.map((file) => ({
+        ...file,
+        sha256: file.sha256.toUpperCase(),
+      })),
+      output_files: manifest.output_files.map((file) => ({
+        ...file,
+        sha256: file.sha256.toUpperCase(),
+      })),
+    })
+  )
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  const bundle = await loadEvaluationBundle(rootDir, {
+    verification: "outputs-and-sources",
+  })
+  assert.equal(
+    bundle.manifest.output_files.every(
+      (file) => file.sha256 === file.sha256.toLowerCase()
+    ),
+    true
+  )
+  assert.match(bundle.manifest.source_files[0].sha256, /^[a-f\d]{64}$/)
+})
+
+void test("mirrors Tier-1 reaction-assessment validity semantics", async (t) => {
+  function withTierOne(fixture, assessmentBearing, tierOneRate) {
+    fixture.evaluation.tiers = [0, 1]
+    const candidate = fixture.evaluation.targets["target-a"].candidates[0]
+    candidate.validity.tiers[1] = { status: "pass" }
+    if (assessmentBearing) {
+      candidate.validity.reaction_assessments = [
+        {
+          reaction_id: "rc:r:/",
+          semantics_id: "semantics-v1",
+          identities: {},
+          coverage: {},
+          obligations: [],
+          closest_reference: null,
+        },
+      ]
+    }
+    for (const statistic of ["rate", "mrr"]) {
+      fixture.analysis.metrics[`tier_1_validity_${statistic}`] = {
+        value: tierOneRate,
+        count: 2,
+      }
+      fixture.analysis.metrics[`solv_1[fixture-stock]_${statistic}`] = {
+        value: tierOneRate,
+        count: 2,
+      }
+      fixture.analysis.by_stratum["depth 0"][`tier_1_validity_${statistic}`] = {
+        value: tierOneRate * 2,
+        count: 1,
+      }
+      fixture.analysis.by_stratum["depth 0"][
+        `solv_1[fixture-stock]_${statistic}`
+      ] = { value: tierOneRate * 2, count: 1 }
+    }
+    return fixture
+  }
+
+  const ordinaryRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, false, 0.5)
+  )
+  const assessedRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, true, 0)
+  )
+  const falsePositiveRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, true, 0.5)
+  )
+  t.after(() => rm(ordinaryRoot, { recursive: true, force: true }))
+  t.after(() => rm(assessedRoot, { recursive: true, force: true }))
+  t.after(() => rm(falsePositiveRoot, { recursive: true, force: true }))
+
+  const ordinary = await loadEvaluationBundle(ordinaryRoot)
+  const assessed = await loadEvaluationBundle(assessedRoot)
+  assert.equal(getTierValidityMetric(ordinary.analysis, 0)?.value, 0.5)
+  assert.equal(getTierValidityMetric(ordinary.analysis, 1)?.value, 0.5)
+  assert.equal(getSolvMetric(ordinary.analysis, 1, "fixture-stock")?.value, 0.5)
+  assert.equal(getTierValidityMetric(assessed.analysis, 0)?.value, 0.5)
+  assert.equal(getTierValidityMetric(assessed.analysis, 1)?.value, 0)
+  assert.equal(getSolvMetric(assessed.analysis, 1, "fixture-stock")?.value, 0)
+  await assert.rejects(
+    loadEvaluationBundle(falsePositiveRoot),
+    /tier_1_validity_rate value 0.5 does not match evaluation value 0/
+  )
+})
+
+void test("rejects hash-valid bundles with inconsistent candidate payloads", async (t) => {
+  const rootDir = await writeFixtureBundle((fixture) => {
+    fixture.evaluation.targets["target-a"].candidates[0].route.annotations = {
+      adapter: "different",
+    }
+    return fixture
+  })
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  await assert.rejects(
+    loadEvaluationBundle(rootDir),
+    /candidate and evaluation payloads differ/
+  )
+  await assert.rejects(
+    loadEvaluationBundleForImport(rootDir),
+    /candidate and evaluation payloads differ/
+  )
+})
+
+void test("rejects unsupported versions and inconsistent run counts", async (t) => {
+  await assert.rejects(
+    loadEvaluationBundle("/missing-evaluation-bundle", {
+      verification: "invalid-policy",
+    }),
+    /unsupported artifact verification policy/
+  )
+
+  const versionRoot = await writeFixtureBundle(
+    (fixture) => fixture,
+    (manifest) => ({ ...manifest, retrocast_version: "0.8.1" })
+  )
+  const countRoot = await writeFixtureBundle(
+    (fixture) => fixture,
+    (manifest) => ({
+      ...manifest,
+      statistics: { ...manifest.statistics, candidates: 999 },
+    })
+  )
+  t.after(() => rm(versionRoot, { recursive: true, force: true }))
+  t.after(() => rm(countRoot, { recursive: true, force: true }))
+
+  await assert.rejects(
+    loadEvaluationBundle(versionRoot),
+    /expected >=0.8.2,<0.9/
+  )
+  await assert.rejects(
+    loadEvaluationBundle(countRoot),
+    /manifest statistics.candidates 999 does not match/
+  )
+
+  const runRoot = await writeFixtureBundle()
+  t.after(() => rm(runRoot, { recursive: true, force: true }))
+  await rewriteBundleArtifact(runRoot, "evaluation-run.json", (run) => ({
+    ...run,
+    targets: 999,
+  }))
+  await assert.rejects(
+    loadEvaluationBundle(runRoot),
+    /evaluation-run targets 999 does not match/
+  )
+})
+
+void test("rejects canonical MRR and derived-stratum mismatches", async (t) => {
+  const mrrRoot = await writeFixtureBundle((fixture) => {
+    fixture.analysis.metrics.tier_0_validity_mrr.value = 0.25
+    return fixture
+  })
+  const missingStratumRoot = await writeFixtureBundle((fixture) => {
+    delete fixture.analysis.by_stratum["depth 0"]
+    return fixture
+  })
+  const mismatchedStratumRoot = await writeFixtureBundle((fixture) => {
+    fixture.analysis.by_stratum["depth 0"].tier_0_validity_rate.value = 0
+    return fixture
+  })
+  t.after(() => rm(mrrRoot, { recursive: true, force: true }))
+  t.after(() => rm(missingStratumRoot, { recursive: true, force: true }))
+  t.after(() => rm(mismatchedStratumRoot, { recursive: true, force: true }))
+
+  await assert.rejects(
+    loadEvaluationBundle(mrrRoot),
+    /tier_0_validity_mrr value 0.25 does not match/
+  )
+  await assert.rejects(
+    loadEvaluationBundle(missingStratumRoot),
+    /missing derived stratum depth 0/
+  )
+  await assert.rejects(
+    loadEvaluationBundle(mismatchedStratumRoot),
+    /depth 0\.tier_0_validity_rate value 0 does not match/
+  )
+})
+
+void test("rejects output symlink escapes and non-files", async (t) => {
+  const escapeRoot = await writeFixtureBundle()
+  const outsideRoot = await mkdtemp(
+    path.join(tmpdir(), "retrocast-io-outside-")
+  )
+  t.after(() => rm(escapeRoot, { recursive: true, force: true }))
+  t.after(() => rm(outsideRoot, { recursive: true, force: true }))
+
+  const candidatePath = path.join(escapeRoot, "candidates.json.gz")
+  const outsidePath = path.join(outsideRoot, "candidates.json.gz")
+  await writeFile(outsidePath, await readFile(candidatePath))
+  await rm(candidatePath)
+  await symlink(outsidePath, candidatePath)
+  await assert.rejects(
+    loadEvaluationBundle(escapeRoot),
+    /output resolves outside its root/
+  )
+
+  const directoryRoot = await writeFixtureBundle()
+  t.after(() => rm(directoryRoot, { recursive: true, force: true }))
+  const evaluationRunPath = path.join(directoryRoot, "evaluation-run.json")
+  await rm(evaluationRunPath)
+  await mkdir(evaluationRunPath)
+  await assert.rejects(
+    loadEvaluationBundle(directoryRoot),
+    /must be a regular file/
+  )
+})
+
+void test("rejects output and source hash mismatches", async (t) => {
+  const outputRoot = await writeFixtureBundle()
+  const sourceRoot = await writeFixtureBundle()
+  t.after(() => rm(outputRoot, { recursive: true, force: true }))
+  t.after(() => rm(sourceRoot, { recursive: true, force: true }))
+
+  const candidatePath = path.join(outputRoot, "candidates.json.gz")
+  const candidateJson = gunzipSync(await readFile(candidatePath))
+  await writeFile(
+    candidatePath,
+    Buffer.concat([await readFile(candidatePath), Buffer.from("tamper")])
+  )
+  await assert.rejects(loadEvaluationBundle(outputRoot), /output hash mismatch/)
+
+  // Keep the candidate payload parseable while changing its exact compressed
+  // representation. The streaming importer must bind parsing to these bytes,
+  // rather than accepting equivalent JSON that no longer matches the manifest.
+  await writeFile(candidatePath, gzipSync(candidateJson, { level: 0 }))
+  await assert.rejects(
+    loadEvaluationBundleForImport(outputRoot),
+    /output hash mismatch/
+  )
+
+  await writeFile(path.join(sourceRoot, "raw-results.json"), "tamper")
+  const outputOnlyBundle = await loadEvaluationBundle(sourceRoot)
+  assert.equal(outputOnlyBundle.verification.policy, "outputs")
+  assert.deepEqual(outputOnlyBundle.verification.sourceFiles, [])
+  await assert.rejects(
+    loadEvaluationBundle(sourceRoot, { verification: "outputs-and-sources" }),
+    /source hash mismatch/
+  )
+})
