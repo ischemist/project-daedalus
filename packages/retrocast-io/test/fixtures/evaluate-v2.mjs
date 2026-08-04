@@ -110,7 +110,9 @@ export function createEvaluateV2Fixture() {
     by_stratum: {
       "depth unknown": {
         tier_0_validity_rate: { value: 0.5, count: 2 },
+        tier_0_validity_mrr: { value: 0.5, count: 2 },
         "solv_0[fixture-stock]_rate": { value: 0.5, count: 2 },
+        "solv_0[fixture-stock]_mrr": { value: 0.5, count: 2 },
       },
     },
     bootstrap_resamples: 100,
@@ -122,7 +124,18 @@ export function createEvaluateV2Fixture() {
       candidates,
       evaluation,
       analysis,
-      evaluationRun: { command: "retrocast evaluate", mode: "strict" },
+      evaluationRun: {
+        engine: "rust",
+        workers: 2,
+        targets: 2,
+        candidates: 2,
+        ingest_seconds: 0.1,
+        score_seconds: 0.1,
+        analyze_seconds: 0.1,
+        total_seconds: 0.4,
+        targets_per_second: 5,
+        candidates_per_second: 5,
+      },
     })
   )
 }

@@ -17,12 +17,16 @@ import type {
   MetricEstimate,
   MetricReliability,
   RetrocastAnalysisFile,
+  RetrocastAssessmentRouteBinding,
   RetrocastCheckResult,
   RetrocastCheckStatus,
   RetrocastConstraintResult,
   RetrocastEvaluationFile,
+  RetrocastEvaluationRun,
   RetrocastManifestFile,
   RetrocastManifestFileInfo,
+  RetrocastObligationAssessment,
+  RetrocastReactionAssessment,
   RetrocastReactionValidity,
   RetrocastReliabilityCode,
   RetrocastRouteValidity,
@@ -100,6 +104,22 @@ function parseNonNegativeInteger(value: unknown, label: string): number {
   return parsed
 }
 
+function parsePositiveInteger(value: unknown, label: string): number {
+  const parsed = parseNonNegativeInteger(value, label)
+  if (parsed === 0) {
+    throw new Error(`${label} must be positive`)
+  }
+  return parsed
+}
+
+function parseNonNegativeNumber(value: unknown, label: string): number {
+  const parsed = parseFiniteNumber(value, label)
+  if (parsed < 0) {
+    throw new Error(`${label} must be non-negative`)
+  }
+  return parsed
+}
+
 function parseEnum<const T extends readonly string[]>(
   value: unknown,
   values: T,
@@ -116,7 +136,39 @@ function parseTaskConstraint(
   label: string
 ): RetrocastTaskConstraint {
   const constraint = parseJsonObject(value, label)
-  parseNonEmptyString(constraint.kind, `${label}.kind`)
+  const kind = parseNonEmptyString(constraint.kind, `${label}.kind`)
+  if (kind === "retrocast.stock_termination") {
+    const stock = parseNonEmptyString(constraint.stock, `${label}.stock`)
+    if (stock.trim() !== stock) {
+      throw new Error(`${label}.stock cannot start or end with whitespace`)
+    }
+  } else if (kind === "retrocast.required_leaves") {
+    if (!Array.isArray(constraint.smiles)) {
+      throw new Error(`${label}.smiles must be an array`)
+    }
+    constraint.smiles.forEach((smiles, index) => {
+      const parsed = parseNonEmptyString(smiles, `${label}.smiles[${index}]`)
+      if (parsed.trim() !== parsed) {
+        throw new Error(
+          `${label}.smiles[${index}] cannot start or end with whitespace`
+        )
+      }
+    })
+  } else if (kind === "retrocast.route_depth") {
+    const maximum = constraint.max_depth
+    const valid =
+      (typeof maximum === "number" &&
+        Number.isInteger(maximum) &&
+        maximum > 0) ||
+      maximum === "short" ||
+      maximum === "medium" ||
+      maximum === "long"
+    if (!valid) {
+      throw new Error(
+        `${label}.max_depth must be a positive integer or short, medium, or long`
+      )
+    }
+  }
   return constraint as RetrocastTaskConstraint
 }
 
@@ -234,6 +286,55 @@ export function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
   }
 }
 
+export function effectiveConstraints(
+  task: BenchmarkDefinition,
+  targetId: string
+): RetrocastTaskConstraint[] {
+  const byKind = new Map(
+    task.default_constraints.map((constraint) => [constraint.kind, constraint])
+  )
+  for (const constraint of task.constraints[targetId] ?? []) {
+    byKind.set(constraint.kind, constraint)
+  }
+  return [...byKind.values()].sort((left, right) =>
+    left.kind < right.kind ? -1 : left.kind > right.kind ? 1 : 0
+  )
+}
+
+export function derivedMetricLabel(task: BenchmarkDefinition): string {
+  if (task.metric_label !== null) {
+    return task.metric_label
+  }
+  const stocks = new Set(
+    task.default_constraints
+      .filter(
+        (constraint) =>
+          constraint.kind === "retrocast.stock_termination" &&
+          typeof constraint.stock === "string"
+      )
+      .map((constraint) => constraint.stock as string)
+  )
+  const parts: string[] = []
+  if (stocks.size === 1) {
+    parts.push([...stocks][0] as string)
+  } else if (stocks.size > 1) {
+    parts.push("stocks")
+  }
+  const kinds = new Set([
+    ...task.default_constraints.map((constraint) => constraint.kind),
+    ...Object.values(task.constraints)
+      .flat()
+      .map((constraint) => constraint.kind),
+  ])
+  if (kinds.has("retrocast.required_leaves")) {
+    parts.push("leaf")
+  }
+  if (kinds.has("retrocast.route_depth")) {
+    parts.push("depth")
+  }
+  return parts.length === 0 ? "task" : parts.join("+")
+}
+
 function parseCheckStatus(value: unknown, label: string): RetrocastCheckStatus {
   return parseEnum(value, ["pass", "fail", "not_evaluated"] as const, label)
 }
@@ -253,11 +354,29 @@ function parseTierResult(value: unknown, label: string): RetrocastTierResult {
   if (value.checks !== undefined && !Array.isArray(value.checks)) {
     throw new Error(`${label}.checks must be an array`)
   }
-  return {
-    status: parseCheckStatus(value.status, `${label}.status`),
-    checks: (value.checks ?? []).map((check, index) =>
-      parseCheckResult(check, `${label}.checks[${index}]`)
-    ),
+  const status = parseCheckStatus(value.status, `${label}.status`)
+  const checks = (value.checks ?? []).map((check, index) =>
+    parseCheckResult(check, `${label}.checks[${index}]`)
+  )
+  assertAggregateStatus(status, checks, label)
+  return { status, checks }
+}
+
+function assertAggregateStatus(
+  status: RetrocastCheckStatus,
+  checks: RetrocastCheckResult[],
+  label: string
+): void {
+  const checksAreDispositive = checks.every(
+    (check) => check.status === "pass" || check.status === "fail"
+  )
+  const consistent =
+    checksAreDispositive &&
+    ((status === "pass" && checks.every((check) => check.status === "pass")) ||
+      (status === "fail" && checks.some((check) => check.status === "fail")) ||
+      (status === "not_evaluated" && checks.length === 0))
+  if (!consistent) {
+    throw new Error(`${label}.status does not agree with its checks`)
   }
 }
 
@@ -315,9 +434,130 @@ function parseRouteValidity(
     throw new Error(`${label}.reactions contains duplicate reaction ids`)
   }
 
-  return {
+  const result: RetrocastRouteValidity = {
+    ...value,
     tiers: parseTierResults(value.tiers, `${label}.tiers`),
     reactions,
+  }
+  if (value.reaction_assessments !== undefined) {
+    result.reaction_assessments = parseReactionAssessments(
+      value.reaction_assessments,
+      `${label}.reaction_assessments`
+    )
+  }
+  if (value.molecule_assessments !== undefined) {
+    result.molecule_assessments = parseObligationAssessments(
+      value.molecule_assessments,
+      `${label}.molecule_assessments`
+    )
+  }
+  if (value.route_assessments !== undefined) {
+    result.route_assessments = parseObligationAssessments(
+      value.route_assessments,
+      `${label}.route_assessments`
+    )
+  }
+  if (value.assessment_route_binding !== undefined) {
+    result.assessment_route_binding =
+      value.assessment_route_binding == null
+        ? null
+        : parseAssessmentRouteBinding(
+            value.assessment_route_binding,
+            `${label}.assessment_route_binding`
+          )
+  }
+  return result
+}
+
+function parseJsonObjectArray(value: unknown, label: string): JsonObject[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`)
+  }
+  return value.map((item, index) => parseJsonObject(item, `${label}[${index}]`))
+}
+
+function parseObligationAssessment(
+  value: unknown,
+  label: string
+): RetrocastObligationAssessment {
+  const assessment = parseJsonObject(value, label)
+  return {
+    ...assessment,
+    claim: parseJsonObject(assessment.claim, `${label}.claim`),
+    evaluation: parseJsonObject(assessment.evaluation, `${label}.evaluation`),
+    receipts: parseJsonObjectArray(assessment.receipts, `${label}.receipts`),
+  }
+}
+
+function parseObligationAssessments(
+  value: unknown,
+  label: string
+): RetrocastObligationAssessment[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`)
+  }
+  return value.map((assessment, index) =>
+    parseObligationAssessment(assessment, `${label}[${index}]`)
+  )
+}
+
+function parseReactionAssessments(
+  value: unknown,
+  label: string
+): RetrocastReactionAssessment[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`)
+  }
+  return value.map((assessmentValue, index) => {
+    const assessmentLabel = `${label}[${index}]`
+    const assessment = parseJsonObject(assessmentValue, assessmentLabel)
+    const closestReference =
+      assessment.closest_reference == null
+        ? null
+        : parseJsonObject(
+            assessment.closest_reference,
+            `${assessmentLabel}.closest_reference`
+          )
+    return {
+      ...assessment,
+      reaction_id: parseNonEmptyString(
+        assessment.reaction_id,
+        `${assessmentLabel}.reaction_id`
+      ),
+      semantics_id: parseNonEmptyString(
+        assessment.semantics_id,
+        `${assessmentLabel}.semantics_id`
+      ),
+      identities: parseJsonObject(
+        assessment.identities,
+        `${assessmentLabel}.identities`
+      ),
+      coverage: parseJsonObject(
+        assessment.coverage,
+        `${assessmentLabel}.coverage`
+      ),
+      obligations: parseObligationAssessments(
+        assessment.obligations,
+        `${assessmentLabel}.obligations`
+      ),
+      closest_reference: closestReference,
+    }
+  })
+}
+
+function parseAssessmentRouteBinding(
+  value: unknown,
+  label: string
+): RetrocastAssessmentRouteBinding {
+  const binding = parseJsonObject(value, label)
+  const sha256 = parseNonEmptyString(binding.sha256, `${label}.sha256`)
+  if (!/^[a-f\d]{64}$/i.test(sha256)) {
+    throw new Error(`${label}.sha256 must be a SHA256 digest`)
+  }
+  return {
+    ...binding,
+    profile_id: parseNonEmptyString(binding.profile_id, `${label}.profile_id`),
+    sha256,
   }
 }
 
@@ -329,12 +569,12 @@ function parseConstraintResult(
   if (value.checks !== undefined && !Array.isArray(value.checks)) {
     throw new Error(`${label}.checks must be an array`)
   }
-  return {
-    status: parseCheckStatus(value.status, `${label}.status`),
-    checks: (value.checks ?? []).map((check, index) =>
-      parseCheckResult(check, `${label}.checks[${index}]`)
-    ),
-  }
+  const status = parseCheckStatus(value.status, `${label}.status`)
+  const checks = (value.checks ?? []).map((check, index) =>
+    parseCheckResult(check, `${label}.checks[${index}]`)
+  )
+  assertAggregateStatus(status, checks, label)
+  return { status, checks }
 }
 
 function parseScoredCandidate(
@@ -382,6 +622,9 @@ function parseScoredCandidate(
     throw new Error(
       `${label} failure candidate constraints must be not_evaluated`
     )
+  }
+  if (value.route != null && constraints.status === "not_evaluated") {
+    throw new Error(`${label} route candidate constraints must be evaluated`)
   }
   if (value.failure != null && matchesAcceptable) {
     throw new Error(
@@ -460,6 +703,28 @@ function parseTargetEvaluation(
         `${label}.candidates rank ${candidate.rank} matched_acceptable_index is out of bounds`
       )
     }
+    if (
+      candidate.route != null &&
+      (candidate.route.target.smiles !== target.smiles ||
+        candidate.route.target.inchikey !== target.inchikey)
+    ) {
+      throw new Error(
+        `${label}.candidates rank ${candidate.rank} route target does not match the enclosing target`
+      )
+    }
+    if (candidate.failure != null) {
+      for (const [field, actual, expected] of [
+        ["target_id", candidate.failure.target_id, target.id],
+        ["target_smiles", candidate.failure.target_smiles, target.smiles],
+        ["target_inchikey", candidate.failure.target_inchikey, target.inchikey],
+      ] as const) {
+        if (actual != null && actual !== expected) {
+          throw new Error(
+            `${label}.candidates rank ${candidate.rank} failure ${field} does not match the enclosing target`
+          )
+        }
+      }
+    }
   }
 
   return {
@@ -516,6 +781,22 @@ export function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
         `evaluation target ${targetId}.target.id must match its key`
       )
     }
+    if (!isDeepStrictEqual(task.targets[targetId], parsedTarget.target)) {
+      throw new Error(
+        `evaluation target ${targetId} does not match its task definition`
+      )
+    }
+    const expectedConstraints = effectiveConstraints(task, targetId)
+    if (
+      !isDeepStrictEqual(
+        parsedTarget.effective_constraints,
+        expectedConstraints
+      )
+    ) {
+      throw new Error(
+        `evaluation target ${targetId}.effective_constraints does not match task overrides`
+      )
+    }
     targets[targetId] = parsedTarget
   }
   const taskIds = Object.keys(task.targets)
@@ -523,13 +804,21 @@ export function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
     throw new Error("evaluation file must contain every task target")
   }
 
+  const metricLabel = parseNonEmptyString(
+    value.metric_label,
+    "evaluation file metric_label"
+  )
+  const expectedMetricLabel = derivedMetricLabel(task)
+  if (metricLabel !== expectedMetricLabel) {
+    throw new Error(
+      `evaluation file metric_label ${metricLabel} does not match derived task label ${expectedMetricLabel}`
+    )
+  }
+
   return {
     task,
     tiers,
-    metric_label: parseNonEmptyString(
-      value.metric_label,
-      "evaluation file metric_label"
-    ),
+    metric_label: metricLabel,
     acceptable_match_level: parseEnum(
       value.acceptable_match_level,
       ["full", "no_stereo", "connectivity"] as const,
@@ -673,6 +962,47 @@ export function parseAnalysisFile(value: unknown): RetrocastAnalysisFile {
             "analysis file bootstrap_resamples"
           ),
     runtime: parseRuntimeSummary(value.runtime, "analysis file runtime"),
+  }
+}
+
+export function parseEvaluationRun(value: unknown): RetrocastEvaluationRun {
+  assertObject(value, "evaluation-run file")
+  return {
+    ...value,
+    engine: parseNonEmptyString(value.engine, "evaluation-run file engine"),
+    workers: parsePositiveInteger(value.workers, "evaluation-run file workers"),
+    targets: parseNonNegativeInteger(
+      value.targets,
+      "evaluation-run file targets"
+    ),
+    candidates: parseNonNegativeInteger(
+      value.candidates,
+      "evaluation-run file candidates"
+    ),
+    ingest_seconds: parseNonNegativeNumber(
+      value.ingest_seconds,
+      "evaluation-run file ingest_seconds"
+    ),
+    score_seconds: parseNonNegativeNumber(
+      value.score_seconds,
+      "evaluation-run file score_seconds"
+    ),
+    analyze_seconds: parseNonNegativeNumber(
+      value.analyze_seconds,
+      "evaluation-run file analyze_seconds"
+    ),
+    total_seconds: parseNonNegativeNumber(
+      value.total_seconds,
+      "evaluation-run file total_seconds"
+    ),
+    targets_per_second: parseNonNegativeNumber(
+      value.targets_per_second,
+      "evaluation-run file targets_per_second"
+    ),
+    candidates_per_second: parseNonNegativeNumber(
+      value.candidates_per_second,
+      "evaluation-run file candidates_per_second"
+    ),
   }
 }
 

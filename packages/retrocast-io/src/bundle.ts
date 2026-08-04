@@ -1,8 +1,13 @@
-import { createReadStream } from "node:fs"
-import path from "node:path"
 import { createHash } from "node:crypto"
+import { createReadStream } from "node:fs"
+import { realpath, stat } from "node:fs/promises"
+import path from "node:path"
 
-import type { JsonObject } from "@ischemist/routes"
+import type {
+  JsonObject,
+  RetrocastCandidate,
+  RetrocastMolecule,
+} from "@ischemist/routes"
 
 import { readJsonArtifact } from "./files.js"
 import { getSolvMetric, getTierValidityMetric } from "./metrics.js"
@@ -12,15 +17,25 @@ import {
   parseAnalysisFile,
   parseCandidatesFile,
   parseEvaluationFile,
+  parseEvaluationRun,
   parseManifestFile,
 } from "./parsers.js"
+import { streamJsonObjectEntries } from "./streaming.js"
 import type {
   ArtifactVerificationPolicy,
   EvaluationBundleFiles,
   LoadEvaluationBundleOptions,
+  MetricEstimate,
+  RetrocastAnalysisFile,
   RetrocastEvaluationFile,
+  RetrocastEvaluationRun,
+  RetrocastManifestFile,
   RetrocastManifestFileInfo,
+  RetrocastScoredCandidate,
+  RetrocastTargetEvaluation,
+  RetrocastTier,
   VerifiedEvaluationBundle,
+  VerifiedEvaluationBundleForImport,
 } from "./types.js"
 
 const REQUIRED_OUTPUTS = {
@@ -30,6 +45,24 @@ const REQUIRED_OUTPUTS = {
   evaluationRun: "evaluation-run.json",
 } as const
 
+type PreparedEvaluationBundle = {
+  rootDir: string
+  manifestPath: string
+  manifestSha256: string
+  manifest: RetrocastManifestFile
+  outputFiles: Omit<EvaluationBundleFiles, "manifest">
+  verification: {
+    policy: ArtifactVerificationPolicy
+    outputFiles: string[]
+    sourceFiles: string[]
+  }
+}
+
+type CandidateDigest = {
+  count: number
+  sha256: string
+}
+
 export async function computeFileSha256(filePath: string): Promise<string> {
   const hash = createHash("sha256")
   for await (const chunk of createReadStream(filePath)) {
@@ -38,44 +71,70 @@ export async function computeFileSha256(filePath: string): Promise<string> {
   return hash.digest("hex")
 }
 
-function resolveBundleOutput(
+function isConfined(rootDir: string, filePath: string): boolean {
+  const relative = path.relative(rootDir, filePath)
+  return (
+    relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
+  )
+}
+
+async function resolveRegularFile(
+  filePath: string,
+  label: string
+): Promise<string> {
+  const resolved = await realpath(filePath)
+  if (!(await stat(resolved)).isFile()) {
+    throw new Error(`evaluation bundle ${label} must be a regular file`)
+  }
+  return resolved
+}
+
+async function resolveBundleOutput(
   rootDir: string,
   file: RetrocastManifestFileInfo
-): string {
+): Promise<string> {
   if (path.isAbsolute(file.path)) {
     throw new Error(
       `evaluation bundle output path must be relative: ${file.path}`
     )
   }
-  const resolved = path.resolve(rootDir, file.path)
-  const relative = path.relative(rootDir, resolved)
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  const lexicalPath = path.resolve(rootDir, file.path)
+  if (!isConfined(rootDir, lexicalPath)) {
     throw new Error(`evaluation bundle output escapes its root: ${file.path}`)
+  }
+  const resolved = await resolveRegularFile(
+    lexicalPath,
+    `output ${JSON.stringify(file.path)}`
+  )
+  if (!isConfined(rootDir, resolved)) {
+    throw new Error(
+      `evaluation bundle output resolves outside its root: ${file.path}`
+    )
   }
   return resolved
 }
 
 function resolveRequiredOutputFiles(
-  rootDir: string,
-  outputs: RetrocastManifestFileInfo[]
+  outputs: RetrocastManifestFileInfo[],
+  resolvedOutputs: string[]
 ): Omit<EvaluationBundleFiles, "manifest"> {
   const resolved = {} as Omit<EvaluationBundleFiles, "manifest">
   for (const [key, fileName] of Object.entries(REQUIRED_OUTPUTS) as [
     keyof typeof REQUIRED_OUTPUTS,
     string,
   ][]) {
-    const matches = outputs.filter(
-      (file) => path.basename(file.path) === fileName
-    )
+    const matches = outputs
+      .map((file, index) => ({
+        file,
+        filePath: resolvedOutputs[index] as string,
+      }))
+      .filter(({ file }) => path.basename(file.path) === fileName)
     if (matches.length !== 1) {
       throw new Error(
         `evaluation bundle manifest must track exactly one ${fileName} output`
       )
     }
-    resolved[key] = resolveBundleOutput(
-      rootDir,
-      matches[0] as RetrocastManifestFileInfo
-    )
+    resolved[key] = matches[0]?.filePath as string
   }
   return resolved
 }
@@ -102,104 +161,343 @@ async function verifyTrackedFiles(
   return hashes.map(({ filePath }) => filePath)
 }
 
-function resolveSourceFile(
+async function resolveSourceFile(
   rootDir: string,
   file: RetrocastManifestFileInfo
-): string {
-  return path.isAbsolute(file.path)
+): Promise<string> {
+  const lexicalPath = path.isAbsolute(file.path)
     ? path.normalize(file.path)
     : path.resolve(rootDir, file.path)
+  return resolveRegularFile(lexicalPath, `source ${JSON.stringify(file.path)}`)
 }
 
-function parseJsonObject(value: unknown, label: string): JsonObject {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be a json object`)
+function assertSupportedRetrocastVersion(version: string): void {
+  const match =
+    /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(version)
+  if (!match) {
+    throw new Error(
+      `manifest retrocast_version is not valid semver: ${version}`
+    )
   }
-  return value as JsonObject
-}
-
-function assertRateMatchesEvaluation(
-  evaluation: RetrocastEvaluationFile,
-  bundle: Pick<VerifiedEvaluationBundle, "analysis">
-): void {
-  const targets = Object.values(evaluation.targets)
-  const targetCount = targets.length
-  for (const tier of evaluation.tiers) {
-    const validityMetric = getTierValidityMetric(bundle.analysis, tier)
-    const solvMetric = getSolvMetric(
-      bundle.analysis,
-      tier,
-      evaluation.metric_label
-    )
-    if (!validityMetric) {
-      throw new Error(`analysis file is missing tier_${tier}_validity_rate`)
-    }
-    if (!solvMetric) {
-      throw new Error(
-        `analysis file is missing solv_${tier}[${evaluation.metric_label}]_rate`
-      )
-    }
-
-    const validitySuccesses = targets.filter((target) =>
-      target.candidates.some(
-        (candidate) => candidate.validity.tiers[`${tier}`]?.status === "pass"
-      )
-    ).length
-    const solvSuccesses = targets.filter((target) =>
-      target.candidates.some(
-        (candidate) =>
-          candidate.validity.tiers[`${tier}`]?.status === "pass" &&
-          candidate.constraints.status === "pass"
-      )
-    ).length
-    assertRate(
-      validityMetric.value,
-      validityMetric.count,
-      validitySuccesses,
-      targetCount,
-      `tier_${tier}_validity_rate`
-    )
-    assertRate(
-      solvMetric.value,
-      solvMetric.count,
-      solvSuccesses,
-      targetCount,
-      `solv_${tier}[${evaluation.metric_label}]_rate`
+  const major = Number(match[1])
+  const minor = Number(match[2])
+  const patchVersion = Number(match[3])
+  const prerelease = match[4]
+  if (
+    major !== 0 ||
+    minor !== 8 ||
+    patchVersion < 2 ||
+    (patchVersion === 2 && prerelease !== undefined)
+  ) {
+    throw new Error(
+      `unsupported RetroCast version ${version}; expected >=0.8.2,<0.9`
     )
   }
 }
 
-function assertRate(
-  actualValue: number,
-  actualCount: number,
-  successes: number,
+function parseManifestCount(
+  statistics: JsonObject,
+  field: "targets" | "candidates"
+): number {
+  const value = statistics[field]
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error(
+      `manifest statistics.${field} must be a non-negative integer`
+    )
+  }
+  return value
+}
+
+function candidateCount(evaluation: RetrocastEvaluationFile): number {
+  return Object.values(evaluation.targets).reduce(
+    (count, target) => count + target.candidates.length,
+    0
+  )
+}
+
+function assertBundleCounts(
+  manifest: RetrocastManifestFile,
+  evaluationRun: RetrocastEvaluationRun,
   targetCount: number,
+  candidates: number,
+  candidateArtifactTargetCount: number,
+  candidateArtifactCandidates: number
+): void {
+  const counts = [
+    [
+      "manifest statistics.targets",
+      parseManifestCount(manifest.statistics, "targets"),
+      targetCount,
+    ],
+    [
+      "manifest statistics.candidates",
+      parseManifestCount(manifest.statistics, "candidates"),
+      candidates,
+    ],
+    ["evaluation-run targets", evaluationRun.targets, targetCount],
+    ["evaluation-run candidates", evaluationRun.candidates, candidates],
+    [
+      "candidate artifact target count",
+      candidateArtifactTargetCount,
+      targetCount,
+    ],
+    [
+      "candidate artifact candidate count",
+      candidateArtifactCandidates,
+      candidates,
+    ],
+  ] as const
+  for (const [label, actual, expected] of counts) {
+    if (actual !== expected) {
+      throw new Error(
+        `${label} ${actual} does not match evaluation count ${expected}`
+      )
+    }
+  }
+}
+
+function metricContribution(
+  target: RetrocastTargetEvaluation,
+  tier: RetrocastTier,
+  solv: boolean,
+  statistic: "rate" | "mrr"
+): number {
+  const passing = target.candidates
+    .filter(
+      (candidate) =>
+        candidate.validity.tiers[`${tier}`]?.status === "pass" &&
+        (!solv || candidate.constraints.status === "pass")
+    )
+    .sort((left, right) => left.rank - right.rank)
+  if (statistic === "rate") {
+    return passing.length > 0 ? 1 : 0
+  }
+  return passing.length === 0 ? 0 : 1 / (passing[0]?.rank as number)
+}
+
+function assertMetric(
+  metric: MetricEstimate | undefined,
+  targets: RetrocastTargetEvaluation[],
+  tier: RetrocastTier,
+  solv: boolean,
+  statistic: "rate" | "mrr",
   metricKey: string
 ): void {
-  if (actualCount !== targetCount) {
+  if (!metric) {
+    throw new Error(`analysis file is missing ${metricKey}`)
+  }
+  if (metric.count !== targets.length) {
     throw new Error(
-      `${metricKey} count ${actualCount} does not match ${targetCount} evaluation targets`
+      `${metricKey} count ${metric.count} does not match ${targets.length} evaluation targets`
     )
   }
-  const expectedValue = targetCount === 0 ? 0 : successes / targetCount
-  if (Math.abs(actualValue - expectedValue) > Number.EPSILON * 8) {
+  const expectedValue =
+    targets.length === 0
+      ? 0
+      : targets.reduce(
+          (sum, target) =>
+            sum + metricContribution(target, tier, solv, statistic),
+          0
+        ) / targets.length
+  if (Math.abs(metric.value - expectedValue) > 1e-12) {
     throw new Error(
-      `${metricKey} value ${actualValue} does not match evaluation value ${expectedValue}`
+      `${metricKey} value ${metric.value} does not match evaluation value ${expectedValue}`
     )
   }
 }
 
-export async function loadEvaluationBundle(
+function assertCanonicalMetrics(
+  evaluation: RetrocastEvaluationFile,
+  analysis: RetrocastAnalysisFile,
+  targets: RetrocastTargetEvaluation[],
+  stratum?: string
+): void {
+  for (const tier of evaluation.tiers) {
+    for (const statistic of ["rate", "mrr"] as const) {
+      const tierKey = `tier_${tier}_validity_${statistic}`
+      const solvKey = `solv_${tier}[${evaluation.metric_label}]_${statistic}`
+      assertMetric(
+        getTierValidityMetric(analysis, tier, statistic, stratum),
+        targets,
+        tier,
+        false,
+        statistic,
+        stratum ? `${stratum}.${tierKey}` : tierKey
+      )
+      assertMetric(
+        getSolvMetric(
+          analysis,
+          tier,
+          evaluation.metric_label,
+          statistic,
+          stratum
+        ),
+        targets,
+        tier,
+        true,
+        statistic,
+        stratum ? `${stratum}.${solvKey}` : solvKey
+      )
+    }
+  }
+}
+
+function moleculeDepth(molecule: RetrocastMolecule): number {
+  const reaction = molecule.product_of
+  if (!reaction) {
+    return 0
+  }
+  return (
+    1 +
+    reaction.reactants.reduce(
+      (maximum, reactant) => Math.max(maximum, moleculeDepth(reactant)),
+      0
+    )
+  )
+}
+
+function targetStratum(target: RetrocastTargetEvaluation): string | null {
+  const acceptableRoute = target.target.acceptable_routes[0]
+  if (acceptableRoute) {
+    return `depth ${moleculeDepth(acceptableRoute.target)}`
+  }
+  const routeDepth = target.effective_constraints.find(
+    (constraint) => constraint.kind === "retrocast.route_depth"
+  )?.max_depth
+  return typeof routeDepth === "string" || typeof routeDepth === "number"
+    ? `depth ${routeDepth}`
+    : null
+}
+
+function assertAnalysisMatchesEvaluation(
+  evaluation: RetrocastEvaluationFile,
+  analysis: RetrocastAnalysisFile
+): void {
+  const targets = Object.values(evaluation.targets)
+  assertCanonicalMetrics(evaluation, analysis, targets)
+
+  const strata = new Map<string, RetrocastTargetEvaluation[]>()
+  for (const target of targets) {
+    const label = targetStratum(target)
+    if (label !== null) {
+      const members = strata.get(label) ?? []
+      members.push(target)
+      strata.set(label, members)
+    }
+  }
+  for (const [label, members] of strata) {
+    if (!analysis.by_stratum[label]) {
+      throw new Error(`analysis file is missing derived stratum ${label}`)
+    }
+    assertCanonicalMetrics(evaluation, analysis, members, label)
+  }
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`
+  }
+  if (value !== null && typeof value === "object") {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
+      .join(",")}}`
+  }
+  const encoded = JSON.stringify(value)
+  if (encoded === undefined) {
+    throw new Error("candidate payload contains a non-json value")
+  }
+  return encoded
+}
+
+function digestCandidates(candidates: RetrocastCandidate[]): string {
+  return createHash("sha256").update(canonicalJson(candidates)).digest("hex")
+}
+
+function projectScoredCandidate(
+  candidate: RetrocastScoredCandidate
+): RetrocastCandidate {
+  return candidate.route != null
+    ? { rank: candidate.rank, route: candidate.route }
+    : { rank: candidate.rank, failure: candidate.failure }
+}
+
+async function streamCandidateDigests(filePath: string): Promise<{
+  digests: Map<string, CandidateDigest>
+  targetCount: number
+  candidateCount: number
+}> {
+  const digests = new Map<string, CandidateDigest>()
+  let candidates = 0
+  await streamJsonObjectEntries(filePath, true, async (targetId, value) => {
+    if (digests.has(targetId)) {
+      throw new Error(
+        `candidate artifact contains duplicate target ${targetId}`
+      )
+    }
+    const parsed = parseCandidatesFile({ [targetId]: value })[targetId] ?? []
+    candidates += parsed.length
+    digests.set(targetId, {
+      count: parsed.length,
+      sha256: digestCandidates(parsed),
+    })
+  })
+  return {
+    digests,
+    targetCount: digests.size,
+    candidateCount: candidates,
+  }
+}
+
+function assertCandidateDigests(
+  digests: Map<string, CandidateDigest>,
+  evaluation: RetrocastEvaluationFile
+): void {
+  if (digests.size !== Object.keys(evaluation.targets).length) {
+    throw new Error(
+      "candidate and evaluation files must contain the same target ids"
+    )
+  }
+  for (const [targetId, target] of Object.entries(evaluation.targets)) {
+    const candidateDigest = digests.get(targetId)
+    if (!candidateDigest) {
+      throw new Error(
+        `candidate artifact is missing evaluation target ${targetId}`
+      )
+    }
+    const candidates = target.candidates.map(projectScoredCandidate)
+    if (
+      candidateDigest.count !== candidates.length ||
+      candidateDigest.sha256 !== digestCandidates(candidates)
+    ) {
+      throw new Error(
+        `candidate and evaluation payloads differ for target ${targetId}`
+      )
+    }
+  }
+}
+
+async function prepareEvaluationBundle(
   rootDir: string,
-  options: LoadEvaluationBundleOptions = {}
-): Promise<VerifiedEvaluationBundle> {
-  const resolvedRoot = path.resolve(rootDir)
-  const manifestPath = path.join(resolvedRoot, "manifest.json")
+  options: LoadEvaluationBundleOptions
+): Promise<PreparedEvaluationBundle> {
+  const resolvedRoot = await realpath(path.resolve(rootDir))
+  if (!(await stat(resolvedRoot)).isDirectory()) {
+    throw new Error("evaluation bundle root must be a directory")
+  }
+  const manifestPath = await resolveRegularFile(
+    path.join(resolvedRoot, "manifest.json"),
+    "manifest"
+  )
+  if (!isConfined(resolvedRoot, manifestPath)) {
+    throw new Error("evaluation bundle manifest resolves outside its root")
+  }
   const [manifestValue, manifestSha256] = await Promise.all([
     readJsonArtifact(manifestPath),
     computeFileSha256(manifestPath),
   ])
   const manifest = parseManifestFile(manifestValue)
+  assertSupportedRetrocastVersion(manifest.retrocast_version)
   if (manifest.action !== "evaluate:v2") {
     throw new Error(
       `evaluation bundle manifest action must be evaluate:v2, got ${manifest.action}`
@@ -207,11 +505,20 @@ export async function loadEvaluationBundle(
   }
 
   const manifestOutputs = manifestOutputFiles(manifest)
-  const outputFiles = resolveRequiredOutputFiles(resolvedRoot, manifestOutputs)
+  const resolvedOutputs = await Promise.all(
+    manifestOutputs.map((info) => resolveBundleOutput(resolvedRoot, info))
+  )
+  if (new Set(resolvedOutputs).size !== resolvedOutputs.length) {
+    throw new Error("evaluation bundle outputs must resolve to distinct files")
+  }
+  const outputFiles = resolveRequiredOutputFiles(
+    manifestOutputs,
+    resolvedOutputs
+  )
   const verifiedOutputFiles = await verifyTrackedFiles(
-    manifestOutputs.map((info) => ({
+    manifestOutputs.map((info, index) => ({
       info,
-      filePath: resolveBundleOutput(resolvedRoot, info),
+      filePath: resolvedOutputs[index] as string,
     })),
     "output"
   )
@@ -225,44 +532,122 @@ export async function loadEvaluationBundle(
       `unsupported artifact verification policy: ${String(verificationPolicy)}`
     )
   }
+  const sourceFiles =
+    verificationPolicy === "outputs-and-sources"
+      ? await Promise.all(
+          manifest.source_files.map((info) =>
+            resolveSourceFile(resolvedRoot, info)
+          )
+        )
+      : []
   const verifiedSourceFiles =
     verificationPolicy === "outputs-and-sources"
       ? await verifyTrackedFiles(
-          manifest.source_files.map((info) => ({
+          manifest.source_files.map((info, index) => ({
             info,
-            filePath: resolveSourceFile(resolvedRoot, info),
+            filePath: sourceFiles[index] as string,
           })),
           "source"
         )
       : []
 
-  const [candidateValue, evaluationValue, analysisValue, evaluationRunValue] =
-    await Promise.all([
-      readJsonArtifact(outputFiles.candidates),
-      readJsonArtifact(outputFiles.evaluation),
-      readJsonArtifact(outputFiles.analysis),
-      readJsonArtifact(outputFiles.evaluationRun),
-    ])
-  const candidatesByTarget = parseCandidatesFile(candidateValue)
-  const evaluation = parseEvaluationFile(evaluationValue)
-  const analysis = parseAnalysisFile(analysisValue)
-  assertCandidateAlignment(candidatesByTarget, evaluation)
-
-  const bundle: VerifiedEvaluationBundle = {
+  return {
     rootDir: resolvedRoot,
+    manifestPath,
     manifestSha256,
+    manifest,
+    outputFiles,
     verification: {
       policy: verificationPolicy,
       outputFiles: verifiedOutputFiles,
       sourceFiles: verifiedSourceFiles,
     },
-    files: { ...outputFiles, manifest: manifestPath },
-    manifest,
+  }
+}
+
+export async function loadEvaluationBundle(
+  rootDir: string,
+  options: LoadEvaluationBundleOptions = {}
+): Promise<VerifiedEvaluationBundle> {
+  const prepared = await prepareEvaluationBundle(rootDir, options)
+  const [candidateValue, evaluationValue, analysisValue, evaluationRunValue] =
+    await Promise.all([
+      readJsonArtifact(prepared.outputFiles.candidates),
+      readJsonArtifact(prepared.outputFiles.evaluation),
+      readJsonArtifact(prepared.outputFiles.analysis),
+      readJsonArtifact(prepared.outputFiles.evaluationRun),
+    ])
+  const candidatesByTarget = parseCandidatesFile(candidateValue)
+  const evaluation = parseEvaluationFile(evaluationValue)
+  const analysis = parseAnalysisFile(analysisValue)
+  const evaluationRun = parseEvaluationRun(evaluationRunValue)
+  assertCandidateAlignment(candidatesByTarget, evaluation)
+  const totalCandidates = candidateCount(evaluation)
+  assertBundleCounts(
+    prepared.manifest,
+    evaluationRun,
+    Object.keys(evaluation.targets).length,
+    totalCandidates,
+    Object.keys(candidatesByTarget).length,
+    Object.values(candidatesByTarget).reduce(
+      (count, candidates) => count + candidates.length,
+      0
+    )
+  )
+  assertAnalysisMatchesEvaluation(evaluation, analysis)
+
+  return {
+    rootDir: prepared.rootDir,
+    manifestSha256: prepared.manifestSha256,
+    verification: prepared.verification,
+    files: { ...prepared.outputFiles, manifest: prepared.manifestPath },
+    manifest: prepared.manifest,
     candidatesByTarget,
     evaluation,
     analysis,
-    evaluationRun: parseJsonObject(evaluationRunValue, "evaluation-run file"),
+    evaluationRun,
   }
-  assertRateMatchesEvaluation(evaluation, bundle)
-  return bundle
+}
+
+export async function loadEvaluationBundleForImport(
+  rootDir: string,
+  options: LoadEvaluationBundleOptions = {}
+): Promise<VerifiedEvaluationBundleForImport> {
+  const prepared = await prepareEvaluationBundle(rootDir, options)
+  const candidateArtifact = await streamCandidateDigests(
+    prepared.outputFiles.candidates
+  )
+  const [evaluationValue, analysisValue, evaluationRunValue] =
+    await Promise.all([
+      readJsonArtifact(prepared.outputFiles.evaluation),
+      readJsonArtifact(prepared.outputFiles.analysis),
+      readJsonArtifact(prepared.outputFiles.evaluationRun),
+    ])
+  const evaluation = parseEvaluationFile(evaluationValue)
+  const analysis = parseAnalysisFile(analysisValue)
+  const evaluationRun = parseEvaluationRun(evaluationRunValue)
+  assertCandidateDigests(candidateArtifact.digests, evaluation)
+  const totalCandidates = candidateCount(evaluation)
+  assertBundleCounts(
+    prepared.manifest,
+    evaluationRun,
+    Object.keys(evaluation.targets).length,
+    totalCandidates,
+    candidateArtifact.targetCount,
+    candidateArtifact.candidateCount
+  )
+  assertAnalysisMatchesEvaluation(evaluation, analysis)
+
+  return {
+    rootDir: prepared.rootDir,
+    manifestSha256: prepared.manifestSha256,
+    verification: prepared.verification,
+    files: { ...prepared.outputFiles, manifest: prepared.manifestPath },
+    manifest: prepared.manifest,
+    evaluation,
+    analysis,
+    evaluationRun,
+    candidateTargetCount: candidateArtifact.targetCount,
+    candidateCount: candidateArtifact.candidateCount,
+  }
 }

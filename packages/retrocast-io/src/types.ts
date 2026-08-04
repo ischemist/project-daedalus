@@ -75,9 +75,34 @@ export type RetrocastReactionValidity = {
   tiers: Partial<Record<`${RetrocastTier}`, RetrocastTierResult>>
 }
 
+export type RetrocastObligationAssessment = JsonObject & {
+  claim: JsonObject
+  evaluation: JsonObject
+  receipts: JsonObject[]
+}
+
+export type RetrocastReactionAssessment = JsonObject & {
+  reaction_id: string
+  semantics_id: string
+  identities: JsonObject
+  coverage: JsonObject
+  obligations: RetrocastObligationAssessment[]
+  closest_reference: JsonObject | null
+}
+
+export type RetrocastAssessmentRouteBinding = JsonObject & {
+  profile_id: string
+  sha256: string
+}
+
 export type RetrocastRouteValidity = {
   tiers: Partial<Record<`${RetrocastTier}`, RetrocastTierResult>>
   reactions: RetrocastReactionValidity[]
+  reaction_assessments?: RetrocastReactionAssessment[]
+  molecule_assessments?: RetrocastObligationAssessment[]
+  route_assessments?: RetrocastObligationAssessment[]
+  assessment_route_binding?: RetrocastAssessmentRouteBinding | null
+  [key: string]: unknown
 }
 
 export type RetrocastConstraintResult = {
@@ -188,6 +213,20 @@ export type RetrocastManifestFile = {
   [key: string]: unknown
 }
 
+export type RetrocastEvaluationRun = {
+  engine: string
+  workers: number
+  targets: number
+  candidates: number
+  ingest_seconds: number
+  score_seconds: number
+  analyze_seconds: number
+  total_seconds: number
+  targets_per_second: number
+  candidates_per_second: number
+  [key: string]: unknown
+}
+
 export type EvaluationBundleFiles = {
   candidates: string
   evaluation: string
@@ -217,7 +256,15 @@ export type VerifiedEvaluationBundle = {
   candidatesByTarget: RetrocastCandidatesByTarget
   evaluation: RetrocastEvaluationFile
   analysis: RetrocastAnalysisFile
-  evaluationRun: JsonObject
+  evaluationRun: RetrocastEvaluationRun
+}
+
+export type VerifiedEvaluationBundleForImport = Omit<
+  VerifiedEvaluationBundle,
+  "candidatesByTarget"
+> & {
+  candidateTargetCount: number
+  candidateCount: number
 }
 
 export type ParsedTierValidityMetricKey = {
