@@ -1,6 +1,9 @@
 # @ischemist/retrocast-io
 
-node-only loaders for retrocast artifact bundles. this package reads filesystem-backed retrocast exports without assuming prisma, react, or an import step.
+node-only loaders for retrocast artifact bundles. this package requires Node
+22.12 or newer and reads filesystem-backed retrocast exports without assuming
+prisma, react, or an import step. its synchronous ESM graph supports both
+`import` and Node's `require(esm)` interoperability.
 
 ```ts
 import {

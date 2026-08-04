@@ -4,16 +4,23 @@ import test from "node:test"
 
 const require = createRequire(import.meta.url)
 
-void test("package exports expose ESM without promising CommonJS", async () => {
-  const retrocastIo = await import("@ischemist/retrocast-io")
-  const routes = await import("@ischemist/routes")
+void test("package exports support ESM import and Node 22 require", async () => {
+  const importedRetrocastIo = await import("@ischemist/retrocast-io")
+  const importedRoutes = await import("@ischemist/routes")
+  const requiredRetrocastIo = require("@ischemist/retrocast-io")
+  const requiredRoutes = require("@ischemist/routes")
+  const requiredProjection = require("@ischemist/routes/projection")
 
-  assert.equal(typeof retrocastIo.loadEvaluationBundleForImport, "function")
-  assert.equal(typeof routes.projectRetrocastRoute, "function")
-  assert.throws(() => require("@ischemist/retrocast-io"), {
-    code: "ERR_PACKAGE_PATH_NOT_EXPORTED",
-  })
-  assert.throws(() => require("@ischemist/routes"), {
-    code: "ERR_PACKAGE_PATH_NOT_EXPORTED",
-  })
+  assert.equal(
+    importedRetrocastIo.loadEvaluationBundleForImport,
+    requiredRetrocastIo.loadEvaluationBundleForImport
+  )
+  assert.equal(
+    importedRoutes.projectRetrocastRoute,
+    requiredRoutes.projectRetrocastRoute
+  )
+  assert.equal(
+    requiredRoutes.projectRetrocastRoute,
+    requiredProjection.projectRetrocastRoute
+  )
 })

@@ -4,7 +4,9 @@ typescript route projection primitives for retrocast-compatible retrosynthesis r
 
 this package converts a retrocast route tree into storage-neutral records and visualization trees. it does not import prisma and does not canonicalize smiles; retrocast is expected to provide already-normalized molecule identity.
 
-the published package is esm-only and ships generated type declarations.
+the published package emits esm and ships generated type declarations. it
+requires Node 22.12 or newer, allowing the same synchronous module graph to be
+loaded through either `import` or Node's `require(esm)` interoperability.
 
 ## install
 
