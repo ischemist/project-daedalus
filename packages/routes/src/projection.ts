@@ -209,7 +209,7 @@ export function parseRetrocastCandidates(
     )
   }
 
-  const candidatesByTarget: RetrocastCandidatesByTarget = {}
+  const candidatesByTarget = Object.create(null) as RetrocastCandidatesByTarget
   for (const [targetId, candidates] of Object.entries(value)) {
     if (!Array.isArray(candidates)) {
       throw new Error(

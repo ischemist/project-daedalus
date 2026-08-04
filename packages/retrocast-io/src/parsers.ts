@@ -47,6 +47,10 @@ function assertObject(
   }
 }
 
+function nullRecord<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>
+}
+
 function parseJsonObject(value: unknown, label: string): JsonObject {
   assertObject(value, label)
   return value
@@ -223,7 +227,7 @@ export function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
     throw new Error('benchmark definition schema_version must be "2"')
   }
   assertObject(value.targets, "benchmark definition targets")
-  const targets: Record<string, BenchmarkTargetDefinition> = {}
+  const targets = nullRecord<BenchmarkTargetDefinition>()
   for (const [targetId, target] of Object.entries(value.targets)) {
     const parsedTarget = parseBenchmarkTarget(
       target,
@@ -237,7 +241,7 @@ export function parseBenchmarkDefinition(value: unknown): BenchmarkDefinition {
     targets[targetId] = parsedTarget
   }
 
-  const constraints: Record<string, RetrocastTaskConstraint[]> = {}
+  const constraints = nullRecord<RetrocastTaskConstraint[]>()
   if (value.constraints != null) {
     assertObject(value.constraints, "benchmark definition constraints")
     for (const [targetId, targetConstraints] of Object.entries(
@@ -766,7 +770,7 @@ export function parseEvaluationFile(value: unknown): RetrocastEvaluationFile {
 
   const task = parseBenchmarkDefinition(value.task)
   assertObject(value.targets, "evaluation file targets")
-  const targets: Record<string, RetrocastTargetEvaluation> = {}
+  const targets = nullRecord<RetrocastTargetEvaluation>()
   for (const [targetId, targetResult] of Object.entries(value.targets)) {
     if (!(targetId in task.targets)) {
       throw new Error(`evaluation target ${targetId} is not in the task`)
@@ -939,7 +943,7 @@ export function parseAnalysisFile(value: unknown): RetrocastAnalysisFile {
   if (value.schema_version !== "2") {
     throw new Error('analysis file schema_version must be "2"')
   }
-  const byStratum: Record<string, Record<string, MetricEstimate>> = {}
+  const byStratum = nullRecord<Record<string, MetricEstimate>>()
   if (value.by_stratum !== undefined) {
     assertObject(value.by_stratum, "analysis file by_stratum")
     for (const [stratum, metrics] of Object.entries(value.by_stratum)) {

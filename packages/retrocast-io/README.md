@@ -72,6 +72,10 @@ canonical digests, releases each raw target, and then aligns those digests
 with `evaluation.json.gz`. Its result intentionally has no
 `candidatesByTarget` field.
 
+Target-keyed maps are returned as null-prototype records so identifiers such
+as `__proto__` and `constructor` remain ordinary own keys. Use `Object.hasOwn`
+when testing membership.
+
 `outputs` is the portable default because source paths may refer to the
 producer machine. Database rebuilds should use `outputs-and-sources`. The
 returned bundle includes the raw manifest SHA256 plus the exact output and

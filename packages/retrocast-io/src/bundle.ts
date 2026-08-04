@@ -435,7 +435,9 @@ async function streamCandidateDigests(filePath: string): Promise<{
         `candidate artifact contains duplicate target ${targetId}`
       )
     }
-    const parsed = parseCandidatesFile({ [targetId]: value })[targetId] ?? []
+    const targetRecord = Object.create(null) as Record<string, unknown>
+    targetRecord[targetId] = value
+    const parsed = parseCandidatesFile(targetRecord)[targetId] ?? []
     candidates += parsed.length
     digests.set(targetId, {
       count: parsed.length,

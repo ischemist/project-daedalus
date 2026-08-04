@@ -20,6 +20,7 @@ import {
   loadEvaluationBundle,
   loadEvaluationBundleForImport,
   parseAnalysisFile,
+  parseBenchmarkDefinition,
   parseCandidatesFile,
   parseCanonicalMetricKey,
   parseEvaluationFile,
@@ -30,6 +31,37 @@ import { createEvaluateV2Fixture } from "./fixtures/evaluate-v2.mjs"
 
 function sha256(content) {
   return createHash("sha256").update(content).digest("hex")
+}
+
+function retargetFixtureWithPrototypeNames(fixture) {
+  const taskTargetA = fixture.evaluation.task.targets["target-a"]
+  const taskTargetB = fixture.evaluation.task.targets["target-b"]
+  const evaluationTargetA = fixture.evaluation.targets["target-a"]
+  const evaluationTargetB = fixture.evaluation.targets["target-b"]
+  taskTargetA.id = "__proto__"
+  taskTargetB.id = "constructor"
+  evaluationTargetA.target.id = "__proto__"
+  evaluationTargetB.target.id = "constructor"
+  evaluationTargetB.candidates[0].failure.target_id = "constructor"
+  fixture.candidates["target-b"][0].failure.target_id = "constructor"
+
+  fixture.evaluation.task.targets = Object.fromEntries([
+    ["__proto__", taskTargetA],
+    ["constructor", taskTargetB],
+  ])
+  fixture.evaluation.task.constraints = Object.fromEntries([
+    ["__proto__", []],
+    ["constructor", []],
+  ])
+  fixture.evaluation.targets = Object.fromEntries([
+    ["__proto__", evaluationTargetA],
+    ["constructor", evaluationTargetB],
+  ])
+  fixture.candidates = Object.fromEntries([
+    ["__proto__", fixture.candidates["target-a"]],
+    ["constructor", fixture.candidates["target-b"]],
+  ])
+  return fixture
 }
 
 async function writeFixtureBundle(
@@ -260,6 +292,40 @@ void test("rejects candidate route and failure ambiguity", () => {
     () => parseCandidatesFile(fixture.candidates),
     /cannot contain both route and failure/
   )
+})
+
+void test("preserves prototype-named target ids in null-prototype records", () => {
+  const fixture = retargetFixtureWithPrototypeNames(createEvaluateV2Fixture())
+
+  const benchmark = parseBenchmarkDefinition(fixture.evaluation.task)
+  const evaluation = parseEvaluationFile(fixture.evaluation)
+  const candidates = parseCandidatesFile(fixture.candidates)
+  assertCandidateAlignment(candidates, evaluation)
+
+  for (const record of [
+    benchmark.targets,
+    benchmark.constraints,
+    evaluation.task.targets,
+    evaluation.targets,
+    candidates,
+  ]) {
+    assert.equal(Object.getPrototypeOf(record), null)
+    assert.equal(Object.hasOwn(record, "__proto__"), true)
+    assert.equal(Object.hasOwn(record, "constructor"), true)
+  }
+  assert.equal(candidates.__proto__.length, 1)
+  assert.equal(candidates.constructor.length, 1)
+})
+
+void test("streams prototype-named target ids through bundle alignment", async (t) => {
+  const rootDir = await writeFixtureBundle(retargetFixtureWithPrototypeNames)
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+
+  const bundle = await loadEvaluationBundleForImport(rootDir)
+  assert.equal(bundle.candidateTargetCount, 2)
+  assert.equal(Object.getPrototypeOf(bundle.evaluation.targets), null)
+  assert.equal(bundle.evaluation.targets.__proto__.candidates.length, 1)
+  assert.equal(bundle.evaluation.targets.constructor.candidates.length, 1)
 })
 
 void test("rejects rank and target mismatches", () => {

@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs"
+import type { Readable } from "node:stream"
 import { createGunzip } from "node:zlib"
 
 type JsonObjectEntryHandler = (key: string, value: unknown) => Promise<void>
@@ -6,6 +7,7 @@ type JsonObjectEntryHandler = (key: string, value: unknown) => Promise<void>
 type ParsePhase =
   | "start"
   | "key-or-end"
+  | "key-required"
   | "key"
   | "colon"
   | "value"
@@ -27,9 +29,26 @@ export async function streamJsonObjectEntries(
   handleEntry: JsonObjectEntryHandler
 ): Promise<void> {
   const source = createReadStream(filePath)
+  await streamJsonObjectEntriesFromReadable(source, compressed, handleEntry)
+}
+
+export async function streamJsonObjectEntriesFromReadable(
+  source: Readable,
+  compressed: boolean,
+  handleEntry: JsonObjectEntryHandler
+): Promise<void> {
   const input = compressed ? source.pipe(createGunzip()) : source
   input.setEncoding("utf8")
+  await streamJsonObjectEntriesFromChunks(
+    input as AsyncIterable<string>,
+    handleEntry
+  )
+}
 
+export async function streamJsonObjectEntriesFromChunks(
+  chunks: AsyncIterable<string> | Iterable<string>,
+  handleEntry: JsonObjectEntryHandler
+): Promise<void> {
   let phase: ParsePhase = "start"
   let keyToken = ""
   let key = ""
@@ -40,7 +59,7 @@ export async function streamJsonObjectEntries(
   let valueEscaped = false
   let complete = false
 
-  for await (const chunk of input) {
+  for await (const chunk of chunks) {
     let valueSegmentStart: number | null = phase === "value" ? 0 : null
     for (let index = 0; index < chunk.length; index += 1) {
       const character = chunk[index] as string
@@ -111,6 +130,16 @@ export async function streamJsonObjectEntries(
             throw new Error("streamed json object requires a string key")
           }
           break
+        case "key-required":
+          if (character !== '"') {
+            throw new Error(
+              "streamed json object requires a string key after a comma"
+            )
+          }
+          keyToken = '"'
+          keyEscaped = false
+          phase = "key"
+          break
         case "key":
           keyToken += character
           if (keyEscaped) {
@@ -137,7 +166,7 @@ export async function streamJsonObjectEntries(
           break
         case "comma-or-end":
           if (character === ",") {
-            phase = "key-or-end"
+            phase = "key-required"
           } else if (character === "}") {
             phase = "done"
             complete = true
