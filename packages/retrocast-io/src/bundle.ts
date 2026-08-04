@@ -9,7 +9,11 @@ import type {
   RetrocastMolecule,
 } from "@ischemist/routes"
 
-import { readJsonArtifact } from "./files.js"
+import {
+  parseJsonArtifactBytes,
+  readArtifactWithSha256,
+  readJsonArtifactWithSha256,
+} from "./files.js"
 import { getSolvMetric, getTierValidityMetric } from "./metrics.js"
 import {
   assertCandidateAlignment,
@@ -51,11 +55,14 @@ type PreparedEvaluationBundle = {
   manifestSha256: string
   manifest: RetrocastManifestFile
   outputFiles: Omit<EvaluationBundleFiles, "manifest">
-  verification: {
-    policy: ArtifactVerificationPolicy
-    outputFiles: string[]
-    sourceFiles: string[]
-  }
+  trackedOutputs: TrackedFile[]
+  verificationPolicy: ArtifactVerificationPolicy
+  verifiedSourceFiles: string[]
+}
+
+type TrackedFile = {
+  info: RetrocastManifestFileInfo
+  filePath: string
 }
 
 type CandidateDigest = {
@@ -142,7 +149,7 @@ function resolveRequiredOutputFiles(
 }
 
 async function verifyTrackedFiles(
-  files: { info: RetrocastManifestFileInfo; filePath: string }[],
+  files: TrackedFile[],
   label: string
 ): Promise<string[]> {
   const hashes: {
@@ -171,6 +178,55 @@ async function verifyTrackedFiles(
     }
   }
   return hashes.map(({ filePath }) => filePath)
+}
+
+function assertTrackedFileSha256(
+  file: TrackedFile,
+  actual: string,
+  label: string
+): void {
+  if (actual !== file.info.sha256) {
+    throw new Error(
+      `evaluation bundle ${label} hash mismatch for ${file.info.path}: expected ${file.info.sha256}, got ${actual}`
+    )
+  }
+}
+
+async function readVerifiedJsonArtifact(
+  file: TrackedFile,
+  label: string
+): Promise<unknown> {
+  const artifact = await readArtifactWithSha256(file.filePath)
+  assertTrackedFileSha256(file, artifact.sha256, label)
+  return parseJsonArtifactBytes(artifact.content, file.filePath.endsWith(".gz"))
+}
+
+function requiredTrackedOutput(
+  prepared: PreparedEvaluationBundle,
+  key: keyof typeof REQUIRED_OUTPUTS
+): TrackedFile {
+  const filePath = prepared.outputFiles[key]
+  const tracked = prepared.trackedOutputs.find(
+    (candidate) => candidate.filePath === filePath
+  )
+  if (!tracked) {
+    throw new Error(
+      `evaluation bundle lost tracked output ${REQUIRED_OUTPUTS[key]}`
+    )
+  }
+  return tracked
+}
+
+async function verifyExtraOutputs(
+  prepared: PreparedEvaluationBundle
+): Promise<void> {
+  const requiredPaths = new Set(Object.values(prepared.outputFiles))
+  await verifyTrackedFiles(
+    prepared.trackedOutputs.filter(
+      (output) => !requiredPaths.has(output.filePath)
+    ),
+    "output"
+  )
 }
 
 async function resolveSourceFile(
@@ -268,6 +324,16 @@ function assertBundleCounts(
   }
 }
 
+function satisfiesValidity(
+  candidate: RetrocastScoredCandidate,
+  tier: RetrocastTier
+): boolean {
+  if (tier > 0 && (candidate.validity.reaction_assessments?.length ?? 0) > 0) {
+    return false
+  }
+  return candidate.validity.tiers[`${tier}`]?.status === "pass"
+}
+
 function metricContribution(
   target: RetrocastTargetEvaluation,
   tier: RetrocastTier,
@@ -277,7 +343,7 @@ function metricContribution(
   const passing = target.candidates
     .filter(
       (candidate) =>
-        candidate.validity.tiers[`${tier}`]?.status === "pass" &&
+        satisfiesValidity(candidate, tier) &&
         (!solv || candidate.constraints.status === "pass")
     )
     .sort((left, right) => left.rank - right.rank)
@@ -441,28 +507,37 @@ function projectScoredCandidate(
     : { rank: candidate.rank, failure: candidate.failure }
 }
 
-async function streamCandidateDigests(filePath: string): Promise<{
+async function streamCandidateDigests(file: TrackedFile): Promise<{
   digests: Map<string, CandidateDigest>
   targetCount: number
   candidateCount: number
 }> {
   const digests = new Map<string, CandidateDigest>()
   let candidates = 0
-  await streamJsonObjectEntries(filePath, true, async (targetId, value) => {
-    if (digests.has(targetId)) {
-      throw new Error(
-        `candidate artifact contains duplicate target ${targetId}`
-      )
-    }
-    const targetRecord = Object.create(null) as Record<string, unknown>
-    targetRecord[targetId] = value
-    const parsed = parseCandidatesFile(targetRecord)[targetId] ?? []
-    candidates += parsed.length
-    digests.set(targetId, {
-      count: parsed.length,
-      sha256: digestCandidates(parsed),
-    })
-  })
+  const streamed = await streamJsonObjectEntries(
+    file.filePath,
+    true,
+    async (targetId, value) => {
+      if (digests.has(targetId)) {
+        throw new Error(
+          `candidate artifact contains duplicate target ${targetId}`
+        )
+      }
+      const targetRecord = Object.create(null) as Record<string, unknown>
+      targetRecord[targetId] = value
+      const parsed = parseCandidatesFile(targetRecord)[targetId] ?? []
+      candidates += parsed.length
+      digests.set(targetId, {
+        count: parsed.length,
+        sha256: digestCandidates(parsed),
+      })
+    },
+    { hashInput: true }
+  )
+  if (!streamed.inputSha256) {
+    throw new Error("candidate artifact stream did not produce an input hash")
+  }
+  assertTrackedFileSha256(file, streamed.inputSha256, "output")
   return {
     digests,
     targetCount: digests.size,
@@ -524,11 +599,8 @@ async function prepareEvaluationBundle(
   if (!isConfined(resolvedRoot, manifestPath)) {
     throw new Error("evaluation bundle manifest resolves outside its root")
   }
-  const [manifestValue, manifestSha256] = await Promise.all([
-    readJsonArtifact(manifestPath),
-    computeFileSha256(manifestPath),
-  ])
-  const manifest = parseManifestFile(manifestValue)
+  const manifestArtifact = await readJsonArtifactWithSha256(manifestPath)
+  const manifest = parseManifestFile(manifestArtifact.value)
   assertSupportedRetrocastVersion(manifest.retrocast_version)
   if (manifest.action !== "evaluate:v2") {
     throw new Error(
@@ -547,13 +619,10 @@ async function prepareEvaluationBundle(
     manifestOutputs,
     resolvedOutputs
   )
-  const verifiedOutputFiles = await verifyTrackedFiles(
-    manifestOutputs.map((info, index) => ({
-      info,
-      filePath: resolvedOutputs[index] as string,
-    })),
-    "output"
-  )
+  const trackedOutputs = manifestOutputs.map((info, index) => ({
+    info,
+    filePath: resolvedOutputs[index] as string,
+  }))
   let verifiedSourceFiles: string[] = []
   if (verificationPolicy === "outputs-and-sources") {
     const sourceFiles = await Promise.all(
@@ -568,14 +637,12 @@ async function prepareEvaluationBundle(
   return {
     rootDir: resolvedRoot,
     manifestPath,
-    manifestSha256,
+    manifestSha256: manifestArtifact.sha256,
     manifest,
     outputFiles,
-    verification: {
-      policy: verificationPolicy,
-      outputFiles: verifiedOutputFiles,
-      sourceFiles: verifiedSourceFiles,
-    },
+    trackedOutputs,
+    verificationPolicy,
+    verifiedSourceFiles,
   }
 }
 
@@ -586,10 +653,23 @@ export async function loadEvaluationBundle(
   const prepared = await prepareEvaluationBundle(rootDir, options)
   const [candidateValue, evaluationValue, analysisValue, evaluationRunValue] =
     await Promise.all([
-      readJsonArtifact(prepared.outputFiles.candidates),
-      readJsonArtifact(prepared.outputFiles.evaluation),
-      readJsonArtifact(prepared.outputFiles.analysis),
-      readJsonArtifact(prepared.outputFiles.evaluationRun),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "candidates"),
+        "output"
+      ),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "evaluation"),
+        "output"
+      ),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "analysis"),
+        "output"
+      ),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "evaluationRun"),
+        "output"
+      ),
+      verifyExtraOutputs(prepared),
     ])
   const candidatesByTarget = parseCandidatesFile(candidateValue)
   const evaluation = parseEvaluationFile(evaluationValue)
@@ -613,7 +693,11 @@ export async function loadEvaluationBundle(
   return {
     rootDir: prepared.rootDir,
     manifestSha256: prepared.manifestSha256,
-    verification: prepared.verification,
+    verification: {
+      policy: prepared.verificationPolicy,
+      outputFiles: prepared.trackedOutputs.map((output) => output.filePath),
+      sourceFiles: prepared.verifiedSourceFiles,
+    },
     files: { ...prepared.outputFiles, manifest: prepared.manifestPath },
     manifest: prepared.manifest,
     candidatesByTarget,
@@ -629,13 +713,23 @@ export async function loadEvaluationBundleForImport(
 ): Promise<VerifiedEvaluationBundleForImport> {
   const prepared = await prepareEvaluationBundle(rootDir, options)
   const candidateArtifact = await streamCandidateDigests(
-    prepared.outputFiles.candidates
+    requiredTrackedOutput(prepared, "candidates")
   )
   const [evaluationValue, analysisValue, evaluationRunValue] =
     await Promise.all([
-      readJsonArtifact(prepared.outputFiles.evaluation),
-      readJsonArtifact(prepared.outputFiles.analysis),
-      readJsonArtifact(prepared.outputFiles.evaluationRun),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "evaluation"),
+        "output"
+      ),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "analysis"),
+        "output"
+      ),
+      readVerifiedJsonArtifact(
+        requiredTrackedOutput(prepared, "evaluationRun"),
+        "output"
+      ),
+      verifyExtraOutputs(prepared),
     ])
   const evaluation = parseEvaluationFile(evaluationValue)
   const analysis = parseAnalysisFile(analysisValue)
@@ -655,7 +749,11 @@ export async function loadEvaluationBundleForImport(
   return {
     rootDir: prepared.rootDir,
     manifestSha256: prepared.manifestSha256,
-    verification: prepared.verification,
+    verification: {
+      policy: prepared.verificationPolicy,
+      outputFiles: prepared.trackedOutputs.map((output) => output.filePath),
+      sourceFiles: prepared.verifiedSourceFiles,
+    },
     files: { ...prepared.outputFiles, manifest: prepared.manifestPath },
     manifest: prepared.manifest,
     evaluation,

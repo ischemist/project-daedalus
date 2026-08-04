@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto"
 import { createReadStream } from "node:fs"
-import { PassThrough, type Readable } from "node:stream"
+import { PassThrough, type Readable, Transform } from "node:stream"
 import { pipeline } from "node:stream/promises"
 import { createGunzip } from "node:zlib"
 
@@ -8,6 +9,10 @@ type JsonObjectEntryHandler = (key: string, value: unknown) => Promise<void>
 export type StreamingJsonObjectLimits = {
   maxKeyCharacters?: number
   maxValueCharacters?: number
+}
+
+export type StreamingJsonObjectOptions = StreamingJsonObjectLimits & {
+  hashInput?: boolean
 }
 
 const DEFAULT_MAX_KEY_CHARACTERS = 64 * 1024
@@ -39,11 +44,17 @@ function isWhitespace(character: string): boolean {
 export async function streamJsonObjectEntries(
   filePath: string,
   compressed: boolean,
-  handleEntry: JsonObjectEntryHandler
-): Promise<void> {
+  handleEntry: JsonObjectEntryHandler,
+  options: StreamingJsonObjectOptions = {}
+): Promise<{ inputSha256: string | null }> {
   const source = createReadStream(filePath)
   try {
-    await streamJsonObjectEntriesFromReadable(source, compressed, handleEntry)
+    return await streamJsonObjectEntriesFromReadable(
+      source,
+      compressed,
+      handleEntry,
+      options
+    )
   } catch (error) {
     source.destroy()
     throw error
@@ -53,21 +64,35 @@ export async function streamJsonObjectEntries(
 export async function streamJsonObjectEntriesFromReadable(
   source: Readable,
   compressed: boolean,
-  handleEntry: JsonObjectEntryHandler
-): Promise<void> {
+  handleEntry: JsonObjectEntryHandler,
+  options: StreamingJsonObjectOptions = {}
+): Promise<{ inputSha256: string | null }> {
   const input = compressed ? createGunzip() : new PassThrough()
+  const inputHash = options.hashInput ? createHash("sha256") : null
+  const hashing = inputHash
+    ? new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          inputHash.update(chunk)
+          callback(null, chunk)
+        },
+      })
+    : null
   input.setEncoding("utf8")
   let parsingError: unknown
   const parsing = streamJsonObjectEntriesFromChunks(
     input as AsyncIterable<string>,
-    handleEntry
+    handleEntry,
+    options
   ).catch((error: unknown) => {
     parsingError = error
     throw error
   })
-  const pumping = pipeline(source, input)
+  const pumping = hashing
+    ? pipeline(source, hashing, input)
+    : pipeline(source, input)
   try {
     await Promise.all([pumping, parsing])
+    return { inputSha256: inputHash?.digest("hex") ?? null }
   } catch (error) {
     source.destroy()
     input.destroy()

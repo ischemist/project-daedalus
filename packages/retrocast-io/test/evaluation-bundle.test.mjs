@@ -4,7 +4,9 @@ import { gunzipSync, gzipSync } from "node:zlib"
 import {
   mkdir,
   mkdtemp,
+  open,
   readFile,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -27,6 +29,10 @@ import {
   solvMetricKey,
   tierValidityMetricKey,
 } from "../dist/index.js"
+import {
+  parseJsonArtifactBytes,
+  readArtifactFromFileHandle,
+} from "../dist/files.js"
 import { createEvaluateV2Fixture } from "./fixtures/evaluate-v2.mjs"
 
 function sha256(content) {
@@ -164,6 +170,29 @@ void test("loads and verifies a compact v0.8.2 evaluate bundle", async (t) => {
     null
   )
   assert.ok("depth 0" in bundle.analysis.by_stratum)
+})
+
+void test("binds artifact hashing and parsing to one open descriptor", async (t) => {
+  const rootDir = await mkdtemp(path.join(tmpdir(), "retrocast-io-binding-"))
+  t.after(() => rm(rootDir, { recursive: true, force: true }))
+  const artifactPath = path.join(rootDir, "artifact.json")
+  const replacementPath = path.join(rootDir, "replacement.json")
+  const trusted = Buffer.from('{"trusted":true}')
+  await writeFile(artifactPath, trusted)
+  await writeFile(replacementPath, '{"trusted":false}')
+
+  const handle = await open(artifactPath, "r")
+  await rename(replacementPath, artifactPath)
+  const artifact = await readArtifactFromFileHandle(handle)
+  await handle.close()
+
+  assert.equal(artifact.sha256, sha256(trusted))
+  assert.deepEqual(await parseJsonArtifactBytes(artifact.content, false), {
+    trusted: true,
+  })
+  assert.deepEqual(JSON.parse(await readFile(artifactPath, "utf8")), {
+    trusted: false,
+  })
 })
 
 void test("streams candidate alignment and returns evaluation as canonical", async (t) => {
@@ -478,6 +507,70 @@ void test("normalizes case-insensitive manifest digests", async (t) => {
   assert.match(bundle.manifest.source_files[0].sha256, /^[a-f\d]{64}$/)
 })
 
+void test("mirrors Tier-1 reaction-assessment validity semantics", async (t) => {
+  function withTierOne(fixture, assessmentBearing, tierOneRate) {
+    fixture.evaluation.tiers = [0, 1]
+    const candidate = fixture.evaluation.targets["target-a"].candidates[0]
+    candidate.validity.tiers[1] = { status: "pass" }
+    if (assessmentBearing) {
+      candidate.validity.reaction_assessments = [
+        {
+          reaction_id: "rc:r:/",
+          semantics_id: "semantics-v1",
+          identities: {},
+          coverage: {},
+          obligations: [],
+          closest_reference: null,
+        },
+      ]
+    }
+    for (const statistic of ["rate", "mrr"]) {
+      fixture.analysis.metrics[`tier_1_validity_${statistic}`] = {
+        value: tierOneRate,
+        count: 2,
+      }
+      fixture.analysis.metrics[`solv_1[fixture-stock]_${statistic}`] = {
+        value: tierOneRate,
+        count: 2,
+      }
+      fixture.analysis.by_stratum["depth 0"][`tier_1_validity_${statistic}`] = {
+        value: tierOneRate * 2,
+        count: 1,
+      }
+      fixture.analysis.by_stratum["depth 0"][
+        `solv_1[fixture-stock]_${statistic}`
+      ] = { value: tierOneRate * 2, count: 1 }
+    }
+    return fixture
+  }
+
+  const ordinaryRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, false, 0.5)
+  )
+  const assessedRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, true, 0)
+  )
+  const falsePositiveRoot = await writeFixtureBundle((fixture) =>
+    withTierOne(fixture, true, 0.5)
+  )
+  t.after(() => rm(ordinaryRoot, { recursive: true, force: true }))
+  t.after(() => rm(assessedRoot, { recursive: true, force: true }))
+  t.after(() => rm(falsePositiveRoot, { recursive: true, force: true }))
+
+  const ordinary = await loadEvaluationBundle(ordinaryRoot)
+  const assessed = await loadEvaluationBundle(assessedRoot)
+  assert.equal(getTierValidityMetric(ordinary.analysis, 0)?.value, 0.5)
+  assert.equal(getTierValidityMetric(ordinary.analysis, 1)?.value, 0.5)
+  assert.equal(getSolvMetric(ordinary.analysis, 1, "fixture-stock")?.value, 0.5)
+  assert.equal(getTierValidityMetric(assessed.analysis, 0)?.value, 0.5)
+  assert.equal(getTierValidityMetric(assessed.analysis, 1)?.value, 0)
+  assert.equal(getSolvMetric(assessed.analysis, 1, "fixture-stock")?.value, 0)
+  await assert.rejects(
+    loadEvaluationBundle(falsePositiveRoot),
+    /tier_1_validity_rate value 0.5 does not match evaluation value 0/
+  )
+})
+
 void test("rejects hash-valid bundles with inconsistent candidate payloads", async (t) => {
   const rootDir = await writeFixtureBundle((fixture) => {
     fixture.evaluation.targets["target-a"].candidates[0].route.annotations = {
@@ -607,11 +700,21 @@ void test("rejects output and source hash mismatches", async (t) => {
   t.after(() => rm(sourceRoot, { recursive: true, force: true }))
 
   const candidatePath = path.join(outputRoot, "candidates.json.gz")
+  const candidateJson = gunzipSync(await readFile(candidatePath))
   await writeFile(
     candidatePath,
     Buffer.concat([await readFile(candidatePath), Buffer.from("tamper")])
   )
   await assert.rejects(loadEvaluationBundle(outputRoot), /output hash mismatch/)
+
+  // Keep the candidate payload parseable while changing its exact compressed
+  // representation. The streaming importer must bind parsing to these bytes,
+  // rather than accepting equivalent JSON that no longer matches the manifest.
+  await writeFile(candidatePath, gzipSync(candidateJson, { level: 0 }))
+  await assert.rejects(
+    loadEvaluationBundleForImport(outputRoot),
+    /output hash mismatch/
+  )
 
   await writeFile(path.join(sourceRoot, "raw-results.json"), "tamper")
   const outputOnlyBundle = await loadEvaluationBundle(sourceRoot)

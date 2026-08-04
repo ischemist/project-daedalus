@@ -89,6 +89,12 @@ producer machine. Database rebuilds should use `outputs-and-sources`. The
 returned bundle includes the raw manifest SHA256 plus the exact output and
 source paths that were verified.
 
+Absolute source paths are intentionally not confined to the bundle root so a
+producer can reference its original planner outputs. Treat them as trusted
+manifest capabilities: use `outputs-and-sources` only for manifests from a
+trusted producer, and use the portable `outputs` policy for untrusted or moved
+bundles.
+
 Metric helpers preserve canonical RetroCast keys and exact task labels. A
 missing metric returns `undefined`; it is never converted to zero. Optional
 fields omitted by v0.8.2 serialization are normalized to explicit `null`,

@@ -11,4 +11,6 @@ Add a lower-peak-memory database import loader that streams standalone candidate
 
 Cap malformed streamed target buffers with 44.9x headroom over the largest target in the 84-bundle migration corpus.
 
+Bind every parsed artifact and streamed candidate digest to the exact verified bytes, and mirror RetroCast's assessment-aware Tier validity semantics.
+
 Declare Node 22.12 as the runtime floor and verify that the emitted synchronous ESM packages load through both `import` and `require`.
